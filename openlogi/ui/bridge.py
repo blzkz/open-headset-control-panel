@@ -11,7 +11,11 @@ from collections.abc import Callable
 from dataclasses import replace
 
 from PyQt6.QtCore import QByteArray, QIODevice, QObject, QProcess, QTimer, pyqtSignal
-from PyQt6.QtMultimedia import QAudioFormat, QAudioSource, QMediaDevices
+
+try:  # QtMultimedia links libpulse; without it we only lose the mic level meter
+    from PyQt6.QtMultimedia import QAudioFormat, QAudioSource, QMediaDevices
+except ImportError:  # pragma: no cover - depends on the host
+    QAudioFormat = QAudioSource = QMediaDevices = None
 
 from ..audio import pulse
 from ..audio.filterchain import pipewire_available
@@ -298,7 +302,7 @@ class MicLevelMonitor(QObject):
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
-        self._source: QAudioSource | None = None
+        self._source = None
         self._io: QIODevice | None = None
         self._node = ""
         self._zero_run = 0
@@ -308,6 +312,8 @@ class MicLevelMonitor(QObject):
         if self._source is not None and node_name == self._node:
             return True
         self.stop()
+        if QMediaDevices is None:
+            return False
         device = next((d for d in QMediaDevices.audioInputs() if bytes(d.id()).decode() == node_name), None)
         if device is None:
             return False
