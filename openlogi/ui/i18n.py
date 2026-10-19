@@ -26,6 +26,7 @@ _ES: dict[str, str] = {
     "Fully charged": "Carga completa",
     "Discharging": "En uso",
     "USB cable": "Cable USB",
+    "USB data link": "Conexión USB (datos)",
     "LIGHTSPEED receiver": "Receptor LIGHTSPEED",
     "Turn on your headset": "Enciende tus auriculares",
     "Plug in the LIGHTSPEED receiver": "Conecta el receptor LIGHTSPEED",

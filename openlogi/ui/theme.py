@@ -71,13 +71,13 @@ QToolTip {{
 }}
 #WinButton {{
     background: transparent;
+    padding: 0;
     border: none;
     border-radius: 0;
     min-width: 46px;
     min-height: 48px;
 }}
 #WinButton:hover {{ background: {BG3}; }}
-#WinClose:hover {{ background: #c42b1c; }}
 #ProfileButton {{
     background: transparent;
     border: 1px solid transparent;

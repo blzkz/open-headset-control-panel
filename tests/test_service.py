@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import tempfile
 import threading
 import time
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from openlogi import service as service_mod
@@ -63,7 +65,9 @@ class ServiceTests(unittest.TestCase):
         rec = Recorder()
         opener = lambda info, on_notification=None, sw_id=0x0A: Headset(  # noqa: E731
             info, Hidpp20Device(fake, on_notification=on_notification, sw_id=sw_id))
-        with mock.patch.object(service_mod, "find_receivers", return_value=[INFO]), \
+        with tempfile.TemporaryDirectory() as cache, \
+                mock.patch.object(service_mod, "CACHE_DIR", Path(cache)), \
+                mock.patch.object(service_mod, "find_receivers", return_value=[INFO]), \
                 mock.patch.object(service_mod.Headset, "open", side_effect=opener), \
                 mock.patch.object(service_mod, "charge_cable_connected", return_value=False):
             svc = HeadsetService(rec, battery_interval=60)
@@ -103,7 +107,8 @@ class CableDebounceTests(unittest.TestCase):
         rec = Recorder()
         rec.cables = []
         rec.on_cable = rec.cables.append
-        svc = HeadsetService(rec)
+        with mock.patch.object(service_mod, "CACHE_DIR", Path(tempfile.mkdtemp())):
+            svc = HeadsetService(rec)
         t = 100.0
         svc._update_cable(True, t)            # first observation is reported at once
         for i in range(20):                   # re-enumerating every 0.5 s

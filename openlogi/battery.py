@@ -1,13 +1,32 @@
-"""Voltage → state-of-charge estimation for the PRO X Wireless Li-ion cell."""
+"""State-of-charge estimation for the PRO X Wireless Li-ion cell.
+
+The headset only reports a cell voltage plus a power flag (0x01 battery,
+0x03 external power). Measured on the real device:
+
+* resting under load ~3.80 V, the same cell reads ~3.98 V while charging (+170 mV);
+* for a few seconds around plugging/unplugging the readings are garbage;
+* a worn plug toggles the power flag repeatedly.
+
+So a naive voltage→percent mapping jumps wildly (13 % on plug-in, 64 % on unplug).
+The estimator below therefore:
+
+* debounces the power flag and ignores voltage right after every transition;
+* while charging, advances the percentage with time instead of trusting voltage;
+* while discharging, follows a smoothed voltage but never rises again unless the
+  gap is large and persistent (a wrong initial guess), so the gauge is monotonic;
+* remembers the last value across restarts.
+"""
 
 from __future__ import annotations
 
+import json
+import os
+import time
 from bisect import bisect_left
 from dataclasses import dataclass
+from pathlib import Path
 
-# (millivolts, percent) discharge curve, ascending voltage. Derived from the
-# calibration points used by G HUB / HeadsetControl for the G PRO family,
-# densified so the estimate is smooth instead of jumping between knees.
+# (millivolts, percent) open-circuit discharge curve, ascending voltage.
 DISCHARGE_CURVE: tuple[tuple[int, float], ...] = (
     (3320, 0.0),
     (3550, 2.0),
@@ -24,12 +43,12 @@ DISCHARGE_CURVE: tuple[tuple[int, float], ...] = (
     (4150, 100.0),
 )
 
-# While charging the cell voltage reads ~80 mV high; compensate so the gauge
-# does not leap upward when the cable is plugged in.
-CHARGING_OFFSET_MV = 80
+CHARGING_OFFSET_MV = 170  # measured: charge voltage minus resting voltage
+FULL_HOURS = 20.0  # Logitech's rated battery life
+CHARGE_HOURS = 3.0  # empty → full on USB
+FULL_CHARGE_MV = 4180  # CV phase reached: the cell is (almost) full
 
-FULL_HOURS = 20.0  # Logitech's rated battery life for the PRO X Wireless
-CHARGE_HOURS = 3.0
+CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "openlogi-headset"
 
 
 def percent_from_millivolts(mv: float, charging: bool = False) -> float:
@@ -66,31 +85,105 @@ class BatteryState:
 
 
 class BatteryEstimator:
-    """Smooths noisy ADC readings with an exponential moving average."""
+    FLAG_DEBOUNCE_S = 8.0  # a power-flag change must persist this long
+    SETTLE_S = 45.0  # ignore voltage this long after plugging / unplugging
+    RAISE_GAP = 8.0  # discharging: only correct upwards by more than this…
+    RAISE_VOTES = 4  # …seen in this many consecutive readings
+    STATE_MAX_AGE_S = 3 * 24 * 3600
 
-    def __init__(self, alpha: float = 0.35):
+    def __init__(self, alpha: float = 0.3, state_file: Path | None = None):
         self.alpha = alpha
+        self.state_file = state_file
+        self._pct: float | None = None
         self._mv: float | None = None
         self._charging: bool | None = None
+        self._raw_flag: bool | None = None
+        self._raw_since = 0.0
+        self._transition_at = float("-inf")
+        self._last_t: float | None = None
+        self._raise_votes = 0
+        self._load()
 
+    # -- persistence -------------------------------------------------------------------
+    def _load(self) -> None:
+        if self.state_file is None:
+            return
+        try:
+            data = json.loads(self.state_file.read_text())
+            if time.time() - float(data["t"]) < self.STATE_MAX_AGE_S:
+                self._pct = max(0.0, min(100.0, float(data["percent"])))
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+
+    def _save(self, now: float) -> None:
+        if self.state_file is None or self._pct is None:
+            return
+        try:
+            self.state_file.parent.mkdir(parents=True, exist_ok=True)
+            self.state_file.write_text(json.dumps({"percent": round(self._pct, 2), "t": now}))
+        except OSError:
+            pass
+
+    # -- public ------------------------------------------------------------------------
     @property
     def empty(self) -> bool:
-        return self._mv is None
+        return self._mv is None and self._pct is None
+
+    @property
+    def transition_pending(self) -> bool:
+        """The raw power flag disagrees with the accepted one: poll again soon."""
+        return self._raw_flag is not None and self._raw_flag != self._charging
 
     def reset(self) -> None:
+        """Headset went away: forget the signal history but keep the last percentage."""
         self._mv = None
         self._charging = None
+        self._raw_flag = None
+        self._last_t = None
+        self._raise_votes = 0
 
-    def update(self, millivolts: int, charging: bool, complete: bool = False) -> BatteryState:
-        # Restart the average whenever the charge state flips: the voltage
-        # steps abruptly in that case and smoothing would only lag.
-        if self._mv is None or charging != self._charging:
-            self._mv = float(millivolts)
+    def update(self, millivolts: int, charging: bool, complete: bool = False,
+               now: float | None = None) -> BatteryState:
+        now = time.time() if now is None else now
+        dt = 0.0 if self._last_t is None else max(0.0, now - self._last_t)
+        self._last_t = now
+
+        # 1. debounce the power flag
+        if charging != self._raw_flag:
+            self._raw_flag, self._raw_since = charging, now
+        if self._charging is None:
+            self._charging = charging
+        elif charging != self._charging and now - self._raw_since >= self.FLAG_DEBOUNCE_S:
+            self._charging = charging
+            self._transition_at = now
+            self._mv = None
+            self._raise_votes = 0
+        settling = now - self._transition_at < self.SETTLE_S or charging != self._charging
+
+        # 2. update the estimate
+        if self._charging:
+            if self._pct is None:
+                self._pct = percent_from_millivolts(millivolts, charging=True)
+            else:
+                self._pct += dt / 3600.0 / CHARGE_HOURS * 100.0
+            full = complete or (not settling and millivolts >= FULL_CHARGE_MV)
+            self._pct = 100.0 if full else min(self._pct, 99.0)
         else:
-            self._mv += self.alpha * (millivolts - self._mv)
-        self._charging = charging
-        pct = percent_from_millivolts(self._mv, charging)
-        full = complete or (charging and pct >= 99.5)
-        if full:
-            pct = 100.0
-        return BatteryState(round(pct), millivolts, charging, full)
+            full = False
+            if not settling:
+                self._mv = float(millivolts) if self._mv is None else self._mv + self.alpha * (millivolts - self._mv)
+                est = percent_from_millivolts(self._mv)
+                if self._pct is None or est <= self._pct:
+                    self._pct = est
+                    self._raise_votes = 0
+                elif est - self._pct > self.RAISE_GAP:
+                    self._raise_votes += 1
+                    if self._raise_votes >= self.RAISE_VOTES:
+                        self._pct, self._raise_votes = est, 0
+                else:
+                    self._raise_votes = 0
+            elif self._pct is None:
+                self._pct = percent_from_millivolts(millivolts)
+
+        self._save(now)
+        return BatteryState(round(self._pct), millivolts, bool(self._charging), full)

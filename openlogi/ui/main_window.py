@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent, QMouseEvent
+from PyQt6.QtCore import QEasingCurve, QEvent, QObject, QPointF, QPropertyAnimation, Qt, pyqtSignal
+from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent, QCursor, QMouseEvent
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -11,10 +11,10 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QApplication,
     QMainWindow,
     QMenu,
     QMessageBox,
-    QSizeGrip,
     QStackedWidget,
     QToolButton,
     QVBoxLayout,
@@ -106,8 +106,6 @@ class TitleBar(QFrame):
         self.maxi = self._win_button("maximize", tr("Maximize"))
         self.maxi.clicked.connect(self._toggle_max)
         close = self._win_button("close", tr("Close"))
-        close.setObjectName("WinClose")
-        close.setStyleSheet("")
         close.clicked.connect(window.close)
         for b in (mini, self.maxi, close):
             lay.addWidget(b)
@@ -233,52 +231,72 @@ class DevicePage(QWidget):
             self.status.setStyleSheet(f"color: {theme.WARN}; border: none;")
 
 
-class ResizableRoot(QWidget):
-    """Central widget whose thin outer margin resizes the frameless window (Wayland-safe)."""
+class EdgeResizer(QObject):
+    """Resize a frameless window from its outer pixels without drawing any border.
 
-    BORDER = 5
+    Filters mouse events on the native QWindow (they arrive before any child widget),
+    so the whole client area stays edge-to-edge; works on Wayland via startSystemResize.
+    """
+
+    BORDER = 6
 
     def __init__(self, window: QMainWindow):
         super().__init__(window)
-        self.setObjectName("Root")
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setMouseTracking(True)
         self._window = window
+        self._override = False
 
-    def _edges(self, pos) -> Qt.Edge:
-        if self._window.isMaximized():
+    def _edges(self, pos: QPointF) -> Qt.Edge:
+        w = self._window
+        if w.isMaximized() or w.isFullScreen():
             return Qt.Edge(0)
-        b, w, h = self.BORDER, self.width(), self.height()
+        b, width, height = self.BORDER, w.width(), w.height()
         edges = Qt.Edge(0)
         if pos.x() <= b:
             edges |= Qt.Edge.LeftEdge
-        elif pos.x() >= w - b:
+        elif pos.x() >= width - b:
             edges |= Qt.Edge.RightEdge
         if pos.y() <= b:
             edges |= Qt.Edge.TopEdge
-        elif pos.y() >= h - b:
+        elif pos.y() >= height - b:
             edges |= Qt.Edge.BottomEdge
         return edges
 
-    def mouseMoveEvent(self, ev: QMouseEvent) -> None:
-        e = self._edges(ev.position())
-        horiz = e & (Qt.Edge.LeftEdge | Qt.Edge.RightEdge)
-        vert = e & (Qt.Edge.TopEdge | Qt.Edge.BottomEdge)
+    def _set_cursor(self, edges: Qt.Edge) -> None:
+        horiz = edges & (Qt.Edge.LeftEdge | Qt.Edge.RightEdge)
+        vert = edges & (Qt.Edge.TopEdge | Qt.Edge.BottomEdge)
         if horiz and vert:
-            diag = e in (Qt.Edge.LeftEdge | Qt.Edge.TopEdge, Qt.Edge.RightEdge | Qt.Edge.BottomEdge)
-            self.setCursor(Qt.CursorShape.SizeFDiagCursor if diag else Qt.CursorShape.SizeBDiagCursor)
+            fdiag = edges in (Qt.Edge.LeftEdge | Qt.Edge.TopEdge, Qt.Edge.RightEdge | Qt.Edge.BottomEdge)
+            shape = Qt.CursorShape.SizeFDiagCursor if fdiag else Qt.CursorShape.SizeBDiagCursor
         elif horiz:
-            self.setCursor(Qt.CursorShape.SizeHorCursor)
+            shape = Qt.CursorShape.SizeHorCursor
         elif vert:
-            self.setCursor(Qt.CursorShape.SizeVerCursor)
+            shape = Qt.CursorShape.SizeVerCursor
         else:
-            self.unsetCursor()
+            shape = None
+        if shape is None:
+            if self._override:
+                QApplication.restoreOverrideCursor()
+                self._override = False
+            return
+        if self._override:
+            QApplication.changeOverrideCursor(QCursor(shape))
+        else:
+            QApplication.setOverrideCursor(QCursor(shape))
+            self._override = True
 
-    def mousePressEvent(self, ev: QMouseEvent) -> None:
-        e = self._edges(ev.position())
-        handle = self._window.windowHandle()
-        if ev.button() == Qt.MouseButton.LeftButton and e and handle is not None:
-            handle.startSystemResize(e)
+    def eventFilter(self, obj, ev: QEvent) -> bool:
+        t = ev.type()
+        if t == QEvent.Type.MouseMove and not ev.buttons():
+            self._set_cursor(self._edges(ev.position()))
+        elif t == QEvent.Type.MouseButtonPress and ev.button() == Qt.MouseButton.LeftButton:
+            edges = self._edges(ev.position())
+            if edges:
+                self._set_cursor(Qt.Edge(0))
+                self._window.windowHandle().startSystemResize(edges)
+                return True
+        elif t == QEvent.Type.Leave:
+            self._set_cursor(Qt.Edge(0))
+        return False
 
 
 class MainWindow(QMainWindow):
@@ -294,13 +312,12 @@ class MainWindow(QMainWindow):
         self.resize(1280, 820)
         self.setMinimumSize(1000, 660)
 
-        root = ResizableRoot(self)
+        root = QWidget()
+        root.setObjectName("Root")
         self.setCentralWidget(root)
         lay = QVBoxLayout(root)
-        b = ResizableRoot.BORDER
-        lay.setContentsMargins(b, b, b, b)
+        lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        root.setStyleSheet(f"#Root {{ border: 1px solid {theme.BG4}; }}")
 
         self.title = TitleBar(self)
         lay.addWidget(self.title)
@@ -312,8 +329,9 @@ class MainWindow(QMainWindow):
             self.pages.addWidget(w)
         lay.addWidget(self.pages, 1)
 
-        self.grip = QSizeGrip(root)
-        self.grip.setFixedSize(16, 16)
+        self.winId()  # create the native window so its events can be filtered
+        self._resizer = EdgeResizer(self)
+        self.windowHandle().installEventFilter(self._resizer)
 
         self.home.openDevice.connect(lambda: self.go(self.DEVICE))
         self.title.backClicked.connect(lambda: self.go(self.HOME))
@@ -386,12 +404,6 @@ class MainWindow(QMainWindow):
     # -- window behaviour ------------------------------------------------------------------
     def resizeEvent(self, ev) -> None:
         super().resizeEvent(ev)
-        self.grip.move(self.width() - self.grip.width(), self.height() - self.grip.height())
-        self.grip.raise_()
-        maximized = self.isMaximized()
-        self.grip.setVisible(not maximized)
-        m = 0 if maximized else ResizableRoot.BORDER
-        self.centralWidget().layout().setContentsMargins(m, m, m, m)
         if hasattr(self, "toast") and self.toast.isVisible():
             self.toast.hide()
 

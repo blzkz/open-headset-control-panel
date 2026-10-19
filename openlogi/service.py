@@ -12,9 +12,9 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 
-from .battery import BatteryEstimator, BatteryState
+from .battery import CACHE_DIR, BatteryEstimator, BatteryState
 from .device import Headset, charge_cable_connected, find_receivers
-from .hidpp import FeatureId, HidppError, HidppTimeout, TransportError
+from .hidpp import FeatureId, HidppDeviceError, HidppError, HidppTimeout, TransportError
 from .hidpp.features import AdcBattery, EqualizerInfo
 from .hidpp.protocol import Message
 
@@ -63,6 +63,7 @@ class HeadsetService(threading.Thread):
     OFFLINE_PROBE_INTERVAL = 2.5
     KEEPALIVE_INTERVAL = 6.0
     CABLE_INTERVAL = 3.0
+    BATTERY_RETRY = 3.0  # seconds between reads while a plug/unplug is being confirmed
     # A worn micro-USB plug makes the charger interface drop and re-enumerate
     # several times per second; only trust a state that stays put this long.
     CABLE_SETTLE = 12.0
@@ -79,7 +80,7 @@ class HeadsetService(threading.Thread):
         self._headset: Headset | None = None
         self._online = False
         self._state: LinkState | None = None
-        self._estimator = BatteryEstimator()
+        self._estimator = BatteryEstimator(state_file=CACHE_DIR / "battery.json")
         self._cable: bool | None = None
         self._cable_seen: bool | None = None
         self._cable_since = 0.0
@@ -87,6 +88,7 @@ class HeadsetService(threading.Thread):
         self._sidetone_index = -1
         self._eq_index = -1
         self._external_events: list[Message] = []
+        self._battery_retry = False
 
     # -- public, thread-safe API --------------------------------------------------
     def set_sidetone(self, level: int) -> None:
@@ -150,9 +152,7 @@ class HeadsetService(threading.Thread):
             if msg.feature_index == self._adc_index and msg.function == 0:
                 reading = AdcBattery.parse_event(msg.payload)
                 if reading.millivolts > 0:
-                    self.listener.on_battery(
-                        self._estimator.update(reading.millivolts, reading.charging, reading.charge_complete)
-                    )
+                    self._feed_battery(reading)
             elif msg.sw_id != 0 and msg.feature_index == self._sidetone_index and msg.function == 1:
                 self.listener.on_sidetone(msg.payload[0])  # changed by another client (e.g. CLI)
             elif msg.sw_id != 0 and msg.feature_index == self._eq_index and msg.function == 3:
@@ -177,8 +177,7 @@ class HeadsetService(threading.Thread):
 
                 if now >= next_cable:
                     next_cable = now + self.CABLE_INTERVAL
-                    if self._update_cable(charge_cable_connected(self._headset.spec), now):
-                        next_battery = 0.0  # charge state changed → re-read soon
+                    self._update_cable(charge_cable_connected(self._headset.spec), now)
 
                 if not self._online:
                     if self._try_probe():
@@ -194,9 +193,10 @@ class HeadsetService(threading.Thread):
                 self._process_pending()
                 now = time.monotonic()
                 if now >= next_battery:
-                    next_battery = now + self.battery_interval
-                    next_keepalive = now + self.KEEPALIVE_INTERVAL
                     self._read_battery()
+                    wait = self.BATTERY_RETRY if self._battery_retry else self.battery_interval
+                    next_battery = now + wait
+                    next_keepalive = now + self.KEEPALIVE_INTERVAL
                 elif now >= next_keepalive:
                     next_keepalive = now + self.KEEPALIVE_INTERVAL
                     try:
@@ -325,11 +325,19 @@ class HeadsetService(threading.Thread):
         hs = self._headset
         if hs is None:
             return
-        reading = hs.read_battery()
+        try:
+            reading = hs.read_battery()
+        except HidppDeviceError as exc:
+            # the ADC answers LOGITECH_INTERNAL while power is being switched: not an error
+            log.debug("battery read skipped: %s", exc)
+            self._battery_retry = True
+            return
         if reading is None or reading.millivolts == 0:
             return
-        if self._estimator.empty:
-            # seed with a median: the ADC jitters by ±10 mV (≈ ±4 %) under charge
-            samples = [reading] + [hs.read_battery() or reading for _ in range(2)]
-            reading = sorted(samples, key=lambda r: r.millivolts)[1]
-        self.listener.on_battery(self._estimator.update(reading.millivolts, reading.charging, reading.charge_complete))
+        self._feed_battery(reading)
+
+    def _feed_battery(self, reading) -> None:
+        state = self._estimator.update(reading.millivolts, reading.charging, reading.charge_complete)
+        # a power flag change is being debounced: confirm it quickly instead of in 30 s
+        self._battery_retry = self._estimator.transition_pending
+        self.listener.on_battery(state)

@@ -98,7 +98,7 @@ class InfoPage(QWidget):
         b.deviceChanged.connect(self._on_device)
         b.batteryChanged.connect(self._on_battery)
         b.stateChanged.connect(self._on_state)
-        b.cableChanged.connect(lambda c: self.bkv.set(tr("USB cable"), tr("On") if c else tr("Off")))
+        b.cableChanged.connect(lambda c: self.bkv.set(tr("USB data link"), tr("On") if c else tr("Off")))
         if b.device:
             self._on_device(b.device)
         self._on_state(b.state, "")

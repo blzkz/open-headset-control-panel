@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from openlogi.battery import BatteryEstimator, percent_from_millivolts
 from openlogi.config import Config, Profile
@@ -182,12 +184,45 @@ class BatteryTests(unittest.TestCase):
         values = [percent_from_millivolts(mv) for mv in range(3300, 4200, 10)]
         self.assertEqual(values, sorted(values))
 
-    def test_estimator_smoothing(self) -> None:
-        est = BatteryEstimator(alpha=0.5)
-        a = est.update(3900, False)
-        b = est.update(3700, False)
-        self.assertGreater(b.percent, percent_from_millivolts(3700))
-        self.assertLess(b.percent, a.percent)
+    def test_real_plug_unplug_trace_has_no_jumps(self) -> None:
+        trace = Path(__file__).with_name("data") / "battery_trace.txt"
+        rows = [tuple(int(x, 0) for x in line.split()) for line in trace.read_text().splitlines()
+                if line and not line.startswith("#")]
+        est = BatteryEstimator()
+        shown = [est.update(mv, bool(flags & 2), now=1000.0 + t) for t, mv, flags in rows]
+        steps = [abs(a.percent - b.percent) for a, b in zip(shown, shown[1:], strict=False)]
+        self.assertLessEqual(max(steps), 2, "gauge must not jump on plug/unplug glitches")
+        self.assertTrue(30 <= shown[-1].percent <= 60)
+        self.assertTrue(shown[-1].charging)
+        flips = sum(1 for a, b in zip(shown, shown[1:], strict=False) if a.charging != b.charging)
+        self.assertLessEqual(flips, 2, "power-flag glitches must be debounced")
+
+    def test_charging_advances_with_time_and_discharge_is_monotonic(self) -> None:
+        est = BatteryEstimator()
+        t = 0.0
+        est.update(3805, False, now=t)
+        start = est.update(3805, False, now=t + 60).percent
+        for i in range(1, 40):  # one hour on the cable; voltage reads high but is ignored
+            s = est.update(3980, True, now=t + 60 + i * 90)
+        self.assertGreater(s.percent, start + 25)
+        self.assertLess(s.percent, start + 40)
+        # unplugged: voltage noise up and down never raises the gauge
+        t = t + 60 + 40 * 90
+        last = 101
+        for i, mv in enumerate([3900, 3905, 3898, 3910, 3895, 3902] * 5):
+            st = est.update(mv, False, now=t + 60 + i * 10)
+            if i > 6:
+                self.assertLessEqual(st.percent, last)
+                last = st.percent
+
+    def test_state_persists(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "battery.json"
+            a = BatteryEstimator(state_file=f)
+            a.update(3880, False)
+            b = BatteryEstimator(state_file=f)
+            self.assertFalse(b.empty)
+            self.assertEqual(b.update(3880, True).percent, a.update(3880, False).percent)
 
 
 class ConfigTests(unittest.TestCase):

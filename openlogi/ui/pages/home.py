@@ -97,9 +97,9 @@ class HomePage(QWidget):
         chips.setSpacing(8)
         chips.addStretch(1)
         self.link_chip = StatusPill("wireless", "LIGHTSPEED")
-        self.usb_chip = StatusPill("usb", tr("USB cable").upper())
+        self.charge_chip = StatusPill("bolt", tr("Charging").upper())
         chips.addWidget(self.link_chip)
-        chips.addWidget(self.usb_chip)
+        chips.addWidget(self.charge_chip)
         chips.addStretch(1)
         root.addLayout(chips)
         root.addSpacing(14)
@@ -122,10 +122,9 @@ class HomePage(QWidget):
         b = ctl.bridge
         b.stateChanged.connect(self._on_state)
         b.batteryChanged.connect(self._on_battery)
-        b.cableChanged.connect(self._on_cable)
         b.deviceChanged.connect(lambda d: self.name.setText(d.model.upper()))
         self._on_state(b.state, "")
-        self._on_cable(b.cable)
+        self.charge_chip.hide()
 
     def _on_state(self, state: LinkState, detail: str) -> None:
         online = state is LinkState.CONNECTED
@@ -152,6 +151,7 @@ class HomePage(QWidget):
             self.batt_icon.set_state(None, False)
             self.batt_pct.setText("—")
             self.batt_detail.setText("")
+            self.charge_chip.hide()
 
     def _grant_access(self) -> None:
         ok, msg = install_rule()
@@ -162,10 +162,8 @@ class HomePage(QWidget):
         self.batt_icon.set_state(b.percent, b.charging)
         self.batt_pct.setText(battery_text(b))
         self.batt_detail.setText(battery_detail(b))
-
-    def _on_cable(self, on: bool) -> None:
-        self.usb_chip.set_active(on)
-        self.usb_chip.setVisible(on)
+        self.charge_chip.set_active(b.charging, tr("Fully charged").upper() if b.full else tr("Charging").upper())
+        self.charge_chip.setVisible(b.charging)
 
     def paintEvent(self, ev) -> None:
         # subtle vignette like the G HUB home background

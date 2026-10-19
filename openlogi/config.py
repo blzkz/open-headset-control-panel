@@ -83,11 +83,15 @@ class AppSettings:
     notify_connection: bool = True
     notify_low_battery: bool = True
     low_battery_percent: int = 15
-    battery_poll_seconds: int = 30
+    battery_poll_seconds: int = 10
+
+
+CONFIG_VERSION = 2
 
 
 @dataclass(slots=True)
 class Config:
+    version: int = CONFIG_VERSION
     app: AppSettings = field(default_factory=AppSettings)
     active_profile: str = "Default"
     profiles: dict[str, Profile] = field(default_factory=lambda: {"Default": Profile()})
@@ -129,6 +133,8 @@ class Config:
     def from_json(cls, data: dict[str, Any]) -> Config:
         cfg = cls()
         cfg.app = _from_dict(AppSettings, data.get("app"))
+        if int(data.get("version", 1)) < 2 and cfg.app.battery_poll_seconds == 30:
+            cfg.app.battery_poll_seconds = 10  # v1 default was too slow to notice plug/unplug
         cfg.active_profile = str(data.get("active_profile", cfg.active_profile))
         profiles = data.get("profiles")
         if isinstance(profiles, dict) and profiles:
