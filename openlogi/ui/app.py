@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import logging
+import os
+import shutil
 import signal
+import subprocess
 import sys
+from pathlib import Path
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QGuiApplication, QIcon
@@ -31,6 +35,31 @@ def _already_running() -> bool:
     return False
 
 
+def _refresh_kde_app_cache() -> None:
+    """Make Plasma's task manager find our .desktop file (and so our icon).
+
+    Plasma resolves a Wayland window's icon through its KService cache (ksycoca),
+    which is per-user and not always rebuilt after a system package install; then
+    the window shows a generic icon. Rebuild it once, in the background, if needed.
+    """
+    if "KDE" not in os.environ.get("XDG_CURRENT_DESKTOP", "") or shutil.which("kbuildsycoca6") is None:
+        return
+    data_dirs = [os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")),
+                 *os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share").split(":")]
+    if not any((Path(d) / "applications" / f"{APP_ID}.desktop").exists() for d in data_dirs):
+        return  # not installed (running from source / AppImage): nothing to find
+    cache_dir = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
+    needle = APP_ID.encode("utf-16-be")
+    for cache in cache_dir.glob("ksycoca6_*"):
+        try:
+            if needle in cache.read_bytes():
+                return
+        except OSError:
+            continue
+    subprocess.Popen(["kbuildsycoca6"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True)
+
+
 def run(minimized: bool = False, page: str | None = None) -> int:
     QGuiApplication.setDesktopFileName(APP_ID)
     app = QApplication(sys.argv)
@@ -42,6 +71,7 @@ def run(minimized: bool = False, page: str | None = None) -> int:
         log.info("another instance is running; asked it to show itself")
         return 0
 
+    _refresh_kde_app_cache()
     config = Config.load()
     i18n.set_language(config.app.language)
     apply_theme(app)

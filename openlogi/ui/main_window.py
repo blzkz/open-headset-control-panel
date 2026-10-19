@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QEasingCurve, QEvent, QObject, QPointF, QPropertyAnimation, Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent, QCursor, QMouseEvent
+from PyQt6.QtGui import QCloseEvent, QCursor, QMouseEvent
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -13,7 +13,6 @@ from PyQt6.QtWidgets import (
     QLabel,
     QApplication,
     QMainWindow,
-    QMenu,
     QMessageBox,
     QStackedWidget,
     QToolButton,
@@ -33,6 +32,7 @@ from .pages.microphone import MicrophonePage
 from .pages.settings import SettingsPage
 from .pages.surround import SurroundPage
 from .widgets.common import BatteryIcon, NavButton, Toast, label
+from .widgets.popup import PopupPanel, ProfileButton
 
 
 class FadeStack(QStackedWidget):
@@ -74,6 +74,9 @@ class TitleBar(QFrame):
         self.back.setToolTip(tr("Back"))
         self.back.setCursor(Qt.CursorShape.PointingHandCursor)
         self.back.clicked.connect(self.backClicked)
+        keep = self.back.sizePolicy()
+        keep.setRetainSizeWhenHidden(True)  # the brand must not shift when "back" appears
+        self.back.setSizePolicy(keep)
         lay.addWidget(self.back)
         lay.addSpacing(8)
 
@@ -88,14 +91,8 @@ class TitleBar(QFrame):
         lay.addLayout(brand)
         lay.addStretch(1)
 
-        self.profile = QToolButton()
-        self.profile.setObjectName("ProfileButton")
-        self.profile.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.profile.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.profile.setIcon(icon("user", theme.TEXT2))
-        self.profile.setCursor(Qt.CursorShape.PointingHandCursor)
-        lay.addWidget(self.profile)
-        lay.addStretch(1)
+        # not in the layout: kept exactly centred on the window in resizeEvent
+        self.profile = ProfileButton(tr("Profile"), self)
 
         self.settings = self._win_button("settings", tr("Settings"))
         self.settings.clicked.connect(self.settingsClicked)
@@ -117,6 +114,13 @@ class TitleBar(QFrame):
         b.setIconSize(size(16))
         b.setToolTip(tip)
         return b
+
+    def place_profile(self) -> None:
+        self.profile.move((self.width() - self.profile.width()) // 2, (self.height() - self.profile.height()) // 2)
+
+    def resizeEvent(self, ev) -> None:
+        super().resizeEvent(ev)
+        self.place_profile()
 
     def _toggle_max(self) -> None:
         w = self.window_
@@ -338,6 +342,7 @@ class MainWindow(QMainWindow):
         self.title.settingsClicked.connect(
             lambda: self.go(self.HOME if self.pages.currentIndex() == self.SETTINGS else self.SETTINGS))
         ctl.profileChanged.connect(self._rebuild_profile_menu)
+        self.title.profile.clicked.connect(self._show_profile_popup)
         self._rebuild_profile_menu()
         self.toast = Toast(root)
         ctl.bridge.errorOccurred.connect(lambda msg: self.toast.show_message(msg, error=True))
@@ -354,26 +359,26 @@ class MainWindow(QMainWindow):
 
     # -- profiles menu --------------------------------------------------------------------
     def _rebuild_profile_menu(self) -> None:
+        self.title.profile.set_profile(self.ctl.config.active_profile)
+        self.title.place_profile()
+
+    def _show_profile_popup(self) -> None:
         cfg = self.ctl.config
-        self.title.profile.setText(f"  {tr('Profile').upper()}:  {cfg.active_profile.upper()}  ▾")
-        menu = QMenu(self)
-        group = QActionGroup(menu)
+        btn = self.title.profile
+        popup = PopupPanel(self, width=max(280, btn.width()))
+        popup.add_header(tr("Profiles"))
         for name in cfg.profiles:
-            act = QAction(name, menu, checkable=True)
-            act.setChecked(name == cfg.active_profile)
-            act.triggered.connect(lambda _=False, n=name: self.ctl.select_profile(n))
-            group.addAction(act)
-            menu.addAction(act)
-        menu.addSeparator()
-        menu.addAction(icon("plus", theme.TEXT2), tr("New profile…"), lambda: self._new_profile(False))
-        menu.addAction(icon("copy", theme.TEXT2), tr("Duplicate profile…"), lambda: self._new_profile(True))
-        menu.addAction(icon("edit", theme.TEXT2), tr("Rename profile…"), self._rename_profile)
-        delete = menu.addAction(icon("trash", theme.TEXT2), tr("Delete profile"), self._delete_profile)
-        delete.setEnabled(len(cfg.profiles) > 1)
-        old = self.title.profile.menu()
-        self.title.profile.setMenu(menu)
-        if old is not None:
-            old.deleteLater()
+            popup.add_item(name, lambda n=name: self.ctl.select_profile(n),
+                           icon_name="user", active=name == cfg.active_profile)
+        popup.add_separator()
+        popup.add_action(tr("New profile…"), "plus", lambda: self._new_profile(False))
+        popup.add_action(tr("Duplicate profile…"), "copy", lambda: self._new_profile(True))
+        popup.add_action(tr("Rename profile…"), "edit", self._rename_profile)
+        popup.add_action(tr("Delete profile"), "trash", self._delete_profile,
+                         enabled=len(cfg.profiles) > 1, danger=True)
+        popup.closed.connect(lambda: btn.setChecked(False))
+        btn.setChecked(True)
+        popup.show_below(btn)
 
     def _ask_name(self, title: str, initial: str = "") -> str | None:
         name, ok = QInputDialog.getText(self, title, tr("Profile name"), text=initial)

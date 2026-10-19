@@ -81,15 +81,38 @@ QToolTip {{
 #ProfileButton {{
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 1.5px;
-    color: {TEXT2};
+    border-radius: 6px;
 }}
-#ProfileButton:hover {{ border-color: {BG4}; color: {TEXT}; }}
-#ProfileButton::menu-indicator {{ image: none; }}
+#ProfileButton:hover {{ background: {BG2}; border-color: {BG4}; }}
+#ProfileButton:checked {{ background: {BG2}; border-color: {ACCENT}; }}
+#ProfileCaption {{
+    color: {TEXT3};
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}}
+#ProfileValue {{
+    color: {TEXT};
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}}
+
+/* ---- popup panel (profile switcher) ---- */
+#PopupPanel {{
+    background: {BG2};
+    border: 1px solid {BG4};
+    border-radius: 10px;
+}}
+QPushButton#PopupItem, QPushButton#PopupAction {{
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 0;
+    text-align: left;
+}}
+QPushButton#PopupItem:hover, QPushButton#PopupAction:hover {{ background: {BG3}; }}
+QPushButton#PopupItem[active="true"] {{ background: rgba(0, 180, 245, 0.10); }}
 
 /* ---- nav rail ---- */
 #NavRail {{
@@ -217,10 +240,18 @@ QComboBox::drop-down {{ border: none; width: 24px; }}
 QComboBox QAbstractItemView {{
     background: {BG2};
     border: 1px solid {BG4};
-    selection-background-color: {BG4};
+    border-radius: 6px;
+    selection-background-color: {BG3};
     selection-color: {TEXT};
-    padding: 4px;
+    padding: 6px;
+    outline: 0;
 }}
+QComboBox QAbstractItemView::item {{
+    min-height: 30px;
+    padding: 2px 10px;
+    border-radius: 4px;
+}}
+QComboBox QAbstractItemView::item:hover {{ background: {BG3}; }}
 QSpinBox::up-button, QSpinBox::down-button {{ width: 0; border: none; }}
 
 QCheckBox {{ spacing: 10px; }}

@@ -13,6 +13,7 @@ _ES: dict[str, str] = {
     "Device": "Dispositivo",
     "Settings": "Ajustes",
     "Profile": "Perfil",
+    "Profiles": "Perfiles",
     "Back": "Volver",
     "Minimize": "Minimizar",
     "Maximize": "Maximizar",

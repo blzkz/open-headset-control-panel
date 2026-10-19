@@ -18,9 +18,10 @@ description: |-
   plus voice enhancement and virtual 7.1 surround through PipeWire.
 
 contents:
-  - src: build/stage/usr/share/openlogi-headset/
-    dst: /usr/share/openlogi-headset/
-    type: tree
+  # Expanded by packaging/build-packages.sh into explicit dir/file entries for
+  # usr/share/openlogi-headset and usr/share/doc/openlogi-headset ("type: tree"
+  # writes Go's ModeDir bit into Arch's .MTREE → pacman "permissions differ").
+  # @TREE@
   - src: build/stage/usr/bin/openlogi-headset
     dst: /usr/bin/openlogi-headset
     file_info: { mode: 0755 }
@@ -35,9 +36,6 @@ contents:
     dst: /usr/share/metainfo/io.github.blzkz.OpenLogiHeadset.metainfo.xml
   - src: build/stage/usr/lib/udev/rules.d/70-openlogi-headset.rules
     dst: /usr/lib/udev/rules.d/70-openlogi-headset.rules
-  - src: build/stage/usr/share/doc/openlogi-headset/
-    dst: /usr/share/doc/openlogi-headset/
-    type: tree
 
 scripts:
   postinstall: packaging/scripts/postinstall.sh
@@ -85,3 +83,7 @@ deb:
     Bugs: https://github.com/blzkz/openLogiHeadsetControlPanel/issues
 archlinux:
   packager: blzkz <blzkz@users.noreply.github.com>
+  scripts:
+    # pacman runs pre/post_upgrade (not install/remove) on updates
+    preupgrade: packaging/scripts/preremove.sh
+    postupgrade: packaging/scripts/postinstall.sh
