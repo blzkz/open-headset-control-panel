@@ -63,6 +63,9 @@ class HeadsetService(threading.Thread):
     OFFLINE_PROBE_INTERVAL = 2.5
     KEEPALIVE_INTERVAL = 6.0
     CABLE_INTERVAL = 3.0
+    # A worn micro-USB plug makes the charger interface drop and re-enumerate
+    # several times per second; only trust a state that stays put this long.
+    CABLE_SETTLE = 12.0
 
     def __init__(self, listener: ServiceListener, battery_interval: float = 30.0):
         super().__init__(name="openlogi-hid", daemon=True)
@@ -78,6 +81,8 @@ class HeadsetService(threading.Thread):
         self._state: LinkState | None = None
         self._estimator = BatteryEstimator()
         self._cable: bool | None = None
+        self._cable_seen: bool | None = None
+        self._cable_since = 0.0
         self._adc_index = -1
         self._sidetone_index = -1
         self._eq_index = -1
@@ -172,10 +177,7 @@ class HeadsetService(threading.Thread):
 
                 if now >= next_cable:
                     next_cable = now + self.CABLE_INTERVAL
-                    cable = charge_cable_connected(self._headset.spec)
-                    if cable != self._cable:
-                        self._cable = cable
-                        self.listener.on_cable(cable)
+                    if self._update_cable(charge_cable_connected(self._headset.spec), now):
                         next_battery = 0.0  # charge state changed → re-read soon
 
                 if not self._online:
@@ -208,7 +210,7 @@ class HeadsetService(threading.Thread):
             except TransportError as exc:
                 log.info("receiver gone: %s", exc)
                 self._close()
-                self._cable = None
+                self._cable = self._cable_seen = None
                 self._set_state(LinkState.NO_RECEIVER)
             except HidppTimeout:
                 log.info("headset stopped answering")
@@ -227,6 +229,17 @@ class HeadsetService(threading.Thread):
                 self.listener.on_error(repr(exc))
                 self._sleep(1.0)
         self._close()
+
+    def _update_cable(self, present: bool, now: float) -> bool:
+        """Debounced cable state; returns True when the reported state changed."""
+        if present != self._cable_seen:
+            self._cable_seen, self._cable_since = present, now
+        settled = self._cable is None or now - self._cable_since >= self.CABLE_SETTLE
+        if settled and present != self._cable:
+            self._cable = present
+            self.listener.on_cable(present)
+            return True
+        return False
 
     def _open_receiver(self) -> None:
         receivers = find_receivers()

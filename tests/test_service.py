@@ -96,3 +96,19 @@ class ServiceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CableDebounceTests(unittest.TestCase):
+    def test_flapping_cable_is_ignored(self):
+        rec = Recorder()
+        rec.cables = []
+        rec.on_cable = rec.cables.append
+        svc = HeadsetService(rec)
+        t = 100.0
+        svc._update_cable(True, t)            # first observation is reported at once
+        for i in range(20):                   # re-enumerating every 0.5 s
+            svc._update_cable(i % 2 == 0, t + 0.5 * i)
+        self.assertEqual(rec.cables, [True])
+        svc._update_cable(False, t + 20)      # really unplugged: settles after CABLE_SETTLE
+        svc._update_cable(False, t + 20 + svc.CABLE_SETTLE)
+        self.assertEqual(rec.cables, [True, False])
