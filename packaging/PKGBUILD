@@ -1,0 +1,22 @@
+# Maintainer: blzkz <blzkz@users.noreply.github.com>
+# AUR-ready PKGBUILD building from the tagged GitHub release.
+pkgname=openlogi-headset
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="G HUB-style control panel for Logitech PRO X Wireless headsets (equalizer, sidetone, battery, voice, 7.1)"
+arch=('any')
+url="https://github.com/blzkz/openLogiHeadsetControlPanel"
+license=('GPL-3.0-or-later')
+depends=('python' 'python-pyqt6' 'qt6-svg' 'qt6-multimedia' 'pipewire' 'libpulse')
+optdepends=('libmysofa: HRTF datasets for virtual 7.1 surround'
+            'pipewire-pulse: volume control through pactl')
+install=openlogi-headset.install
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+    cd "openLogiHeadsetControlPanel-$pkgver"
+    ./packaging/stage.sh "$pkgver"
+    cp -a build/stage/. "$pkgdir/"
+    python -m compileall -q -d /usr/share/openlogi-headset "$pkgdir/usr/share/openlogi-headset"
+}

@@ -1,0 +1,3 @@
+# OpenLogi Headset: let the logged-in user talk HID++ to Logitech PRO (X) Wireless headsets.
+#   0aa7 PRO Wireless · 0aaa/0aba PRO X Wireless LIGHTSPEED receiver · 0abb PRO X charging cable
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0aa7|0aaa|0aba|0abb", TAG+="uaccess"

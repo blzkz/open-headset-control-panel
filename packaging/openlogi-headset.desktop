@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=OpenLogi Headset
+GenericName=Headset Control Panel
+GenericName[es]=Panel de control de auriculares
+Comment=Configure Logitech PRO X Wireless headsets: equalizer, sidetone, battery, voice and surround
+Comment[es]=Configura los auriculares Logitech PRO X Wireless: ecualizador, sidetone, batería, voz y envolvente
+Exec=openlogi-headset
+Icon=openlogi-headset
+Terminal=false
+Categories=AudioVideo;Audio;Settings;HardwareSettings;
+Keywords=logitech;headset;equalizer;sidetone;battery;g hub;pro x;
+StartupWMClass=openlogi-headset

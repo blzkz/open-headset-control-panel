@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openlogi-headset"
+dynamic = ["version"]
+description = "G HUB-style control panel for Logitech PRO X Wireless headsets on Linux (HID++ 2.0)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+dependencies = ["PyQt6>=6.5"]
+keywords = ["logitech", "headset", "hidpp", "pro x", "equalizer", "sidetone", "pipewire"]
+classifiers = [
+    "Environment :: X11 Applications :: Qt",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+
+[project.scripts]
+openlogi-headsetctl = "openlogi.cli:main"
+
+[project.gui-scripts]
+openlogi-headset = "openlogi.__main__:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "openlogi.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["openlogi*"]
+
+[tool.setuptools.package-data]
+openlogi = ["assets/images/*.png", "assets/icons/*.svg"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"

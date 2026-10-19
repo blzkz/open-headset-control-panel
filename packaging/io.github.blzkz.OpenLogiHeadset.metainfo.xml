@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.blzkz.OpenLogiHeadset</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>OpenLogi Headset</name>
+  <summary>G HUB-style control panel for Logitech PRO X Wireless headsets</summary>
+  <summary xml:lang="es">Panel de control estilo G HUB para auriculares Logitech PRO X Wireless</summary>
+  <description>
+    <p>Configure the Logitech G PRO X Wireless LIGHTSPEED headset on Linux: 10-band onboard equalizer,
+    sidetone, battery status, voice enhancement and virtual 7.1 surround through PipeWire, profiles and a tray icon.</p>
+    <p xml:lang="es">Configura los auriculares Logitech G PRO X Wireless LIGHTSPEED en Linux: ecualizador integrado
+    de 10 bandas, sidetone, batería, mejora de voz y sonido envolvente 7.1 virtual con PipeWire, perfiles e icono en la bandeja.</p>
+  </description>
+  <launchable type="desktop-id">openlogi-headset.desktop</launchable>
+  <url type="homepage">https://github.com/blzkz/openLogiHeadsetControlPanel</url>
+  <url type="bugtracker">https://github.com/blzkz/openLogiHeadsetControlPanel/issues</url>
+  <developer id="io.github.blzkz">
+    <name>blzkz</name>
+  </developer>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/blzkz/openLogiHeadsetControlPanel/main/docs/screenshots/home.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/blzkz/openLogiHeadsetControlPanel/main/docs/screenshots/eq.png</image>
+    </screenshot>
+  </screenshots>
+  <provides>
+    <modalias>usb:v046Dp0ABA*</modalias>
+    <modalias>usb:v046Dp0AAA*</modalias>
+  </provides>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Settings</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@VERSION@"/>
+  </releases>
+</component>

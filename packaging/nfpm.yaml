@@ -1,0 +1,87 @@
+# nfpm config: one staged tree → .deb (Debian/Ubuntu/Mint/Pop!_OS), .rpm (Fedora/openSUSE/RHEL-likes)
+# and .pkg.tar.zst (Arch/Manjaro/CachyOS/EndeavourOS). Run from the repo root:
+#   VERSION=1.2.3 nfpm package -f packaging/nfpm.yaml -p deb -t dist/
+name: openlogi-headset
+arch: all
+platform: linux
+version: ${VERSION}
+release: 1
+section: sound
+priority: optional
+maintainer: blzkz <blzkz@users.noreply.github.com>
+vendor: OpenLogi
+homepage: https://github.com/blzkz/openLogiHeadsetControlPanel
+license: GPL-3.0-or-later
+description: |-
+  G HUB-style control panel for Logitech PRO X Wireless headsets.
+  Onboard 10-band equalizer, sidetone, battery status over HID++ 2.0,
+  plus voice enhancement and virtual 7.1 surround through PipeWire.
+
+contents:
+  - src: build/stage/usr/share/openlogi-headset/
+    dst: /usr/share/openlogi-headset/
+    type: tree
+  - src: build/stage/usr/bin/openlogi-headset
+    dst: /usr/bin/openlogi-headset
+    file_info: { mode: 0755 }
+  - src: build/stage/usr/bin/openlogi-headsetctl
+    dst: /usr/bin/openlogi-headsetctl
+    file_info: { mode: 0755 }
+  - src: build/stage/usr/share/applications/openlogi-headset.desktop
+    dst: /usr/share/applications/openlogi-headset.desktop
+  - src: build/stage/usr/share/icons/hicolor/scalable/apps/openlogi-headset.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/openlogi-headset.svg
+  - src: build/stage/usr/share/metainfo/io.github.blzkz.OpenLogiHeadset.metainfo.xml
+    dst: /usr/share/metainfo/io.github.blzkz.OpenLogiHeadset.metainfo.xml
+  - src: build/stage/usr/lib/udev/rules.d/70-openlogi-headset.rules
+    dst: /usr/lib/udev/rules.d/70-openlogi-headset.rules
+  - src: build/stage/usr/share/doc/openlogi-headset/
+    dst: /usr/share/doc/openlogi-headset/
+    type: tree
+
+scripts:
+  postinstall: packaging/scripts/postinstall.sh
+  preremove: packaging/scripts/preremove.sh
+
+overrides:
+  deb:
+    depends:
+      - python3 (>= 3.10)
+      - python3-pyqt6
+      - python3-pyqt6.qtsvg
+      - python3-pyqt6.qtmultimedia
+      - pipewire-bin
+      - pulseaudio-utils
+    recommends:
+      - pipewire-pulse
+      - libspa-0.2-modules
+      - libmysofa1
+  rpm:
+    depends:
+      - python3 >= 3.10
+      - (python3-pyqt6 or python3-PyQt6)
+      - (pipewire-utils or pipewire-tools)
+      - pulseaudio-utils
+    recommends:
+      - pipewire-pulseaudio
+      - libmysofa
+  archlinux:
+    depends:
+      - python
+      - python-pyqt6
+      - qt6-svg
+      - qt6-multimedia
+      - pipewire
+      - libpulse
+    suggests:
+      - libmysofa
+      - pipewire-pulse
+
+rpm:
+  group: Applications/Multimedia
+  summary: G HUB-style control panel for Logitech PRO X Wireless headsets
+deb:
+  fields:
+    Bugs: https://github.com/blzkz/openLogiHeadsetControlPanel/issues
+archlinux:
+  packager: blzkz <blzkz@users.noreply.github.com>
