@@ -418,3 +418,13 @@ def fadd(a: float, b: float) -> float:
 
 def fdiv(a: float, b: float) -> float:
     return f32(f32(a) / f32(b))
+
+
+def lround(x: float) -> int:
+    """C ``lround``/``llround``: nearest integer, halfway cases away from zero."""
+    import math
+
+    if x < 0:
+        return -lround(-x)
+    r = math.floor(x)
+    return int(r) + (1 if x - r >= 0.5 else 0)
