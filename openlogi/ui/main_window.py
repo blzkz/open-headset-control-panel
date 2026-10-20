@@ -27,6 +27,7 @@ from .icons import icon, size
 from .pages.equalizer import EqualizerPage
 from .pages.home import HomePage, battery_detail
 from .pages.info import InfoPage
+from .pages.lighting import LightingPage
 from .pages.microphone import MicrophonePage
 from .pages.settings import SettingsPage
 from .pages.surround import SurroundPage
@@ -146,8 +147,10 @@ class DevicePage(QWidget):
         ("surround", "Surround"),
         ("info", "Device"),
         ("settings", "Settings"),  # pinned to the bottom of the rail
+        ("light", "Lighting"),  # only for RGB models; shown right after Microphone
     )
     SETTINGS = 4
+    LIGHTING = 5
 
     def __init__(self, ctl: Controller):
         super().__init__()
@@ -158,7 +161,8 @@ class DevicePage(QWidget):
 
         self.nav = NavRail()
         for i, (ic, tip) in enumerate(self.PAGES):
-            self.nav.add_item(ic, tr(tip), bottom=i == self.SETTINGS)
+            self.nav.add_item(ic, tr(tip), bottom=i == self.SETTINGS, position=2 if i == self.LIGHTING else -1)
+        self.nav.set_item_visible(self.LIGHTING, False)
         root.addWidget(self.nav)
 
         main = QVBoxLayout()
@@ -197,6 +201,7 @@ class DevicePage(QWidget):
         self.stack.addWidget(SurroundPage(ctl))
         self.stack.addWidget(InfoPage(ctl))
         self.stack.addWidget(SettingsPage(ctl))
+        self.stack.addWidget(LightingPage(ctl))
         main.addWidget(self.stack, 1)
         root.addLayout(main, 1)
 
@@ -204,10 +209,17 @@ class DevicePage(QWidget):
         self.show_page(0)
 
         b = ctl.bridge
-        b.deviceChanged.connect(lambda d: self.name.setText(d.model.upper()))
+        b.deviceChanged.connect(self._on_device)
         b.batteryChanged.connect(self._on_battery)
         b.stateChanged.connect(self._on_state)
         self._on_state(b.state, "")
+
+    def _on_device(self, d) -> None:
+        self.name.setText(d.model.upper())
+        has_lights = bool(d.light_zones)
+        self.nav.set_item_visible(self.LIGHTING, has_lights)
+        if not has_lights and self.nav.current() == self.LIGHTING:
+            self.show_page(0)
 
     def show_page(self, index: int) -> None:
         self.nav.set_current(index)

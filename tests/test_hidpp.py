@@ -30,8 +30,11 @@ NAME = b"PRO X Wireless Gaming Headset"
 class FakeHeadset:
     """Implements the subset of HID++ 2.0 the PRO X answers, byte-exact with the real device."""
 
-    def __init__(self, online: bool = True):
+    def __init__(self, online: bool = True, features: list[int] | None = None):
         self.online = online
+        self.features = list(features or FEATURES)
+        self.auto_off = 30
+        self.leds: list[bytes] = []
         self.sidetone = 0
         self.gains = [0] * 10
         self.queue: list[bytes] = []
@@ -57,20 +60,20 @@ class FakeHeadset:
 
     def _answer(self, req: bytes) -> bytes:
         idx, fn, p = req[2], req[3] >> 4, req[4:]
-        if idx >= len(FEATURES):
+        if idx >= len(self.features):
             return self._error(req, 6)
-        fid = FEATURES[idx]
+        fid = self.features[idx]
         if fid == 0x0000:
             if fn == 0:
                 want = int.from_bytes(p[0:2], "big")
-                return self._reply(req, bytes([FEATURES.index(want) if want in FEATURES else 0]))
+                return self._reply(req, bytes([self.features.index(want) if want in self.features else 0]))
             if fn == 1:
                 return self._reply(req, bytes([4, 2, p[2]]))
         if fid == 0x0001:
             if fn == 0:
-                return self._reply(req, bytes([len(FEATURES) - 1]))
+                return self._reply(req, bytes([len(self.features) - 1]))
             if fn == 1:
-                return self._reply(req, FEATURES[p[0]].to_bytes(2, "big") + b"\0\0")
+                return self._reply(req, self.features[p[0]].to_bytes(2, "big") + b"\0\0")
         if fid == 0x0003:
             if fn == 0:
                 return self._reply(req, bytes.fromhex("01ffffffff0003000000000aba0000"))
@@ -110,6 +113,16 @@ class FakeHeadset:
                 return self._reply(req, bytes([self.sidetone]))
         if fid == 0x1F20 and fn == 0:
             return self._reply(req, bytes([0x0F, 0x1C, 0x03]))
+        if fid == 0x1F20 and fn == 1:
+            return self._reply(req, bytes([self.auto_off]))
+        if fid == 0x1F20 and fn == 2:
+            self.auto_off = p[0]
+            return self._reply(req, bytes([self.auto_off]))
+        if fid == 0x1004 and fn == 1:
+            return self._reply(req, bytes([64, 0x04, 0x00, 0x00]))
+        if fid == 0x8070 and fn == 3:
+            self.leds.append(bytes(p[:9]))
+            return self._reply(req, b"")
         return self._error(req, 7)
 
 
@@ -176,6 +189,60 @@ class ProtocolTests(unittest.TestCase):
         self.dev.poll_notifications(0)
         self.assertEqual(len(seen), 1)
         self.assertTrue(seen[0].is_notification)
+
+
+class MultiModelTests(unittest.TestCase):
+    def _headset(self, pid: int, fake: FakeHeadset):
+        from openlogi.device import Headset
+        from openlogi.hidpp.transport import HidrawInfo
+
+        hs = Headset(HidrawInfo("/dev/fake", 0x046D, pid, "fake", "", True, True), Hidpp20Device(fake))
+        hs.probe()
+        return hs
+
+    def test_pro_x_capabilities(self) -> None:
+        hs = self._headset(0x0ABA, FakeHeadset())
+        self.assertTrue(hs.caps.equalizer and hs.caps.sidetone and hs.caps.auto_off)
+        self.assertFalse(hs.caps.lights)
+        self.assertEqual(hs.auto_off.set(10), 10)
+        self.assertEqual(hs.auto_off.get(), 10)
+
+    def test_g935_like_device(self) -> None:
+        fake = FakeHeadset(features=[0x0000, 0x0001, 0x0005, 0x8070, 0x1004, 0x8300])
+        hs = self._headset(0x0A87, fake)
+        self.assertEqual(hs.spec.key, "g933-family")
+        self.assertFalse(hs.caps.equalizer)
+        self.assertTrue(hs.caps.lights and hs.caps.sidetone)
+        self.assertFalse(hs.caps.auto_off)  # no ADC feature → no timer
+        reading = hs.read_battery()
+        self.assertEqual((reading.percent, reading.charging), (64, False))
+        from openlogi.hidpp.features import LightMode
+        hs.leds.set_zone(1, LightMode.BREATHING, (0, 0xB6, 0xFF))
+        self.assertEqual(fake.leds[-1], bytes([1, 2, 0x00, 0xB6, 0xFF, 0x0F, 0xA0, 0x00, 0x64]))
+
+    def test_udev_rules_cover_every_model(self) -> None:
+        from openlogi.models import ALL_PIDS
+        from openlogi.permissions import RULE
+
+        packaged = (Path(__file__).parent.parent / "packaging" / "70-openlogi-headset.rules").read_text()
+        for pid in ALL_PIDS:
+            self.assertIn(f"{pid:04x}", packaged)
+            self.assertIn(f"{pid:04x}", RULE)
+
+    def test_receiver_selection_prefers_vendor_collection(self) -> None:
+        from unittest import mock
+
+        from openlogi import device
+        from openlogi.hidpp.transport import HidrawInfo
+
+        nodes = [
+            HidrawInfo("/dev/hidraw1", 0x046D, 0x0A66, "G533", "usb-1-2/input0", True, False),
+            HidrawInfo("/dev/hidraw2", 0x046D, 0x0A66, "G533", "usb-1-2/input3", True, True),
+            HidrawInfo("/dev/hidraw3", 0x046D, 0xC52B, "Unifying", "usb-1-3/input2", True, True),
+        ]
+        with mock.patch.object(device, "enumerate_hidraw", return_value=nodes):
+            found = device.find_receivers()
+        self.assertEqual([n.path for n in found], ["/dev/hidraw2"])
 
 
 class BatteryTests(unittest.TestCase):

@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from enum import Enum
 
 from .battery import CACHE_DIR, BatteryEstimator, BatteryState
-from .device import Headset, charge_cable_connected, find_receivers
+from .device import BatterySource, Headset, charge_cable_connected, find_receivers
 from .hidpp import FeatureId, HidppDeviceError, HidppError, HidppTimeout, TransportError
-from .hidpp.features import AdcBattery, EqualizerInfo
+from .hidpp.features import AdcBattery, EqualizerInfo, LevelReading, LightMode
 from .hidpp.protocol import Message
 
 log = logging.getLogger(__name__)
@@ -44,6 +44,12 @@ class DeviceSnapshot:
     has_sidetone: bool
     has_equalizer: bool
     has_battery: bool
+    model_key: str = ""
+    verified: bool = True
+    wireless: bool = True
+    has_auto_off: bool = False
+    light_zones: tuple[tuple[int, str], ...] = ()
+    battery_source: str = "none"
 
 
 class ServiceListener:
@@ -55,6 +61,7 @@ class ServiceListener:
     def on_sidetone(self, level: int) -> None: ...
     def on_equalizer(self, gains: list[int]) -> None: ...
     def on_cable(self, connected: bool) -> None: ...
+    def on_auto_off(self, minutes: int) -> None: ...
     def on_error(self, message: str) -> None: ...
 
 
@@ -100,7 +107,16 @@ class HeadsetService(threading.Thread):
     def refresh_battery(self) -> None:
         self._submit("battery", True)
 
-    def set_desired_state(self, sidetone: int | None, gains: list[int] | None) -> None:
+    def set_auto_off(self, minutes: int) -> None:
+        self._submit("auto_off", int(minutes))
+
+    def set_lights(self, zones: dict[int, tuple[int, tuple[int, int, int], int]]) -> None:
+        """``{zone: (mode, (r, g, b), brightness)}``."""
+        self._submit("lights", dict(zones))
+
+    def set_desired_state(self, sidetone: int | None, gains: list[int] | None,
+                          auto_off: int | None = None,
+                          lights: dict[int, tuple[int, tuple[int, int, int], int]] | None = None) -> None:
         """State re-applied automatically every time the headset (re)connects."""
         with self._lock:
             self._desired = {}
@@ -108,6 +124,10 @@ class HeadsetService(threading.Thread):
                 self._desired["sidetone"] = int(sidetone)
             if gains is not None:
                 self._desired["equalizer"] = list(gains)
+            if auto_off is not None:
+                self._desired["auto_off"] = int(auto_off)
+            if lights:
+                self._desired["lights"] = dict(lights)
 
     def stop(self) -> None:
         self._stop_evt.set()
@@ -265,6 +285,9 @@ class HeadsetService(threading.Thread):
             self._set_state(LinkState.HEADSET_OFF)
             return False
         self._online = True
+        if self._estimator.curve is not hs.spec.curve:
+            self._estimator = BatteryEstimator(state_file=CACHE_DIR / f"battery-{hs.spec.key}.json",
+                                               curve=hs.spec.curve)
         self._estimator.reset()
         self._adc_index = hs.adc_feature_index()
         self._sidetone_index = self._index_of(FeatureId.SIDETONE)
@@ -285,7 +308,13 @@ class HeadsetService(threading.Thread):
                 eq_info=hs.eq_info,
                 has_sidetone=hs.caps.sidetone,
                 has_equalizer=hs.caps.equalizer,
-                has_battery=hs.caps.battery,
+                has_battery=hs.caps.battery is not BatterySource.NONE,
+                model_key=hs.spec.key,
+                verified=hs.spec.verified,
+                wireless=hs.spec.wireless,
+                has_auto_off=hs.caps.auto_off,
+                light_zones=hs.spec.light_zones if hs.caps.lights else (),
+                battery_source=hs.caps.battery.value,
             )
         )
         # Re-apply the active profile, then report what the device actually holds.
@@ -297,6 +326,8 @@ class HeadsetService(threading.Thread):
             self.listener.on_sidetone(hs.sidetone.get())
         if hs.caps.equalizer:
             self.listener.on_equalizer(hs.equalizer.get())
+        if hs.caps.auto_off:
+            self.listener.on_auto_off(hs.auto_off.get())
         self._set_state(LinkState.CONNECTED)
         return True
 
@@ -318,6 +349,12 @@ class HeadsetService(threading.Thread):
         if "equalizer" in pending and hs.caps.equalizer:
             gains = hs.equalizer.set(pending["equalizer"])  # type: ignore[arg-type]
             self.listener.on_equalizer(gains)
+        if "auto_off" in pending and hs.caps.auto_off:
+            self.listener.on_auto_off(hs.auto_off.set(pending["auto_off"]))  # type: ignore[arg-type]
+        if "lights" in pending and hs.caps.lights:
+            for zone, (mode, rgb, brightness) in pending["lights"].items():  # type: ignore[union-attr]
+                if any(z == zone for z, _ in hs.spec.light_zones):
+                    hs.leds.set_zone(zone, LightMode(mode), rgb, brightness)
         if "battery" in pending:
             self._read_battery()
 
@@ -332,7 +369,12 @@ class HeadsetService(threading.Thread):
             log.debug("battery read skipped: %s", exc)
             self._battery_retry = True
             return
-        if reading is None or reading.millivolts == 0:
+        if reading is None:
+            return
+        if isinstance(reading, LevelReading):  # the device reports a percentage itself
+            self.listener.on_battery(BatteryState(reading.percent, 0, reading.charging, reading.full))
+            return
+        if reading.millivolts == 0:
             return
         self._feed_battery(reading)
 

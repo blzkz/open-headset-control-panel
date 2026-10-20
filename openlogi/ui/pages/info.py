@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QGridLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QComboBox, QGridLayout, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from ...battery import BatteryState
 from ...service import DeviceSnapshot, LinkState
@@ -13,6 +13,8 @@ from ..i18n import tr
 from ..widgets.common import BatteryIcon, Card, label
 from ..widgets.visuals import HeadsetView
 from .home import battery_detail
+
+AUTO_OFF_CHOICES = (0, 5, 10, 15, 20, 30, 45, 60, 90, 120)
 
 
 class KeyValueGrid(QWidget):
@@ -82,20 +84,38 @@ class InfoPage(QWidget):
         bat.body.addWidget(self.bkv)
         grid.addWidget(bat, 1, 0)
 
+        self.power = Card(tr("Power"))
+        prow = QHBoxLayout()
+        ptext = QVBoxLayout()
+        ptext.setSpacing(3)
+        ptext.addWidget(label(tr("Auto power-off")))
+        ptext.addWidget(label(tr("Turn the headset off after this long without audio"), "Faint", wrap=True))
+        prow.addLayout(ptext, 1)
+        self.auto_off = QComboBox()
+        self.auto_off.setMinimumWidth(140)
+        for minutes in AUTO_OFF_CHOICES:
+            self.auto_off.addItem(tr("Never") if minutes == 0 else tr("{n} min", n=minutes), minutes)
+        self.auto_off.activated.connect(lambda i: ctl.set_auto_off(self.auto_off.itemData(i)))
+        prow.addWidget(self.auto_off)
+        self.power.body.addLayout(prow)
+        self.power.hide()
+        grid.addWidget(self.power, 2, 0)
+
         feats = Card(tr("HID++ features"))
         self.fkv = KeyValueGrid()
         feats.body.addWidget(self.fkv)
-        grid.addWidget(feats, 2, 0)
+        grid.addWidget(feats, 3, 0)
 
         side = Card()
         self.view = HeadsetView("headset-side.png", clickable=False)
         self.view.setMinimumHeight(420)
         side.body.addWidget(self.view)
-        grid.addWidget(side, 0, 1, 3, 1)
-        grid.setRowStretch(3, 1)
+        grid.addWidget(side, 0, 1, 4, 1)
+        grid.setRowStretch(4, 1)
 
         b = ctl.bridge
         b.deviceChanged.connect(self._on_device)
+        ctl.autoOffChanged.connect(self._on_auto_off)
         b.batteryChanged.connect(self._on_battery)
         b.stateChanged.connect(self._on_state)
         b.cableChanged.connect(lambda c: self.bkv.set(tr("USB data link"), tr("On") if c else tr("Off")))
@@ -113,7 +133,16 @@ class InfoPage(QWidget):
         }
         self.kv.set(tr("LIGHTSPEED receiver"), names[state])
 
+    def _on_auto_off(self, minutes: int) -> None:
+        i = self.auto_off.findData(minutes)
+        if i < 0:  # a value set elsewhere (e.g. the CLI): show it too
+            self.auto_off.addItem(tr("{n} min", n=minutes), minutes)
+            i = self.auto_off.count() - 1
+        self.auto_off.setCurrentIndex(i)
+
     def _on_device(self, d: DeviceSnapshot) -> None:
+        self.power.setVisible(d.has_auto_off)
+        self.view.set_image("headset-side.png" if d.model_key == "pro-x-wireless" else d.image)
         self.kv.set(tr("Name"), d.name)
         self.kv.set(tr("Model"), d.model)
         for kind, version in d.firmware:

@@ -46,6 +46,7 @@ class HeadsetView(QWidget):
         self._gray = _grayscale(self._pix) if not self._pix.isNull() else self._pix
         self._online = 0.0
         self._hover = 0.0
+        self._tint: str | None = None
         self._clickable = clickable
         self._scaled_cache: dict[tuple, QPixmap] = {}
         self._fade = QVariantAnimation(self)
@@ -68,6 +69,11 @@ class HeadsetView(QWidget):
             self._pix, self._gray = pm, _grayscale(pm)
             self._scaled_cache.clear()
             self.update()
+
+    def set_tint(self, color: str | None) -> None:
+        """Spotlight colour (defaults to the accent); used to preview RGB lighting."""
+        self._tint = color
+        self.update()
 
     def set_online(self, online: bool) -> None:
         target = 1.0 if online else 0.0
@@ -137,7 +143,7 @@ class HeadsetView(QWidget):
         center = QPointF(w / 2, y + lh * 0.48)
         spot = QRadialGradient(center, max(lw, lh) * 0.75)
         a = int(46 + 40 * self._online + 25 * self._hover)
-        c1 = QColor(theme.ACCENT)
+        c1 = QColor(self._tint or theme.ACCENT)
         c1.setAlpha(int(a * self._online))
         neutral = QColor(255, 255, 255, int(16 + 10 * self._hover))
         spot.setColorAt(0.0, c1 if self._online > 0.05 else neutral)

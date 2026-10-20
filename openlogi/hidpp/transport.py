@@ -30,7 +30,8 @@ class HidrawInfo:
     product_id: int
     name: str
     phys: str
-    hidpp: bool
+    hidpp: bool  # declares HID++ long reports (report ID 0x11)
+    vendor_page: bool = False  # …inside a Logitech vendor collection (0xFF43 / 0xFF00)
 
     @property
     def usb_id(self) -> str:
@@ -63,7 +64,8 @@ def enumerate_hidraw(vendor_id: int | None = None) -> list[HidrawInfo]:
             desc = (node / "device" / "report_descriptor").read_bytes()
         except OSError:
             desc = b""
-        hidpp = _HIDPP_LONG_REPORT in desc and any(p in desc for p in _HIDPP_USAGE_PAGES)
+        hidpp = _HIDPP_LONG_REPORT in desc
+        vendor_page = any(p in desc for p in _HIDPP_USAGE_PAGES)
         found.append(
             HidrawInfo(
                 path=f"/dev/{node.name}",
@@ -72,6 +74,7 @@ def enumerate_hidraw(vendor_id: int | None = None) -> list[HidrawInfo]:
                 name=uevent.get("HID_NAME", ""),
                 phys=uevent.get("HID_PHYS", ""),
                 hidpp=hidpp,
+                vendor_page=vendor_page,
             )
         )
     return found

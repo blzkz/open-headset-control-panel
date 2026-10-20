@@ -1,3 +1,3 @@
-# OpenLogi Headset: let the logged-in user talk HID++ to Logitech PRO (X) Wireless headsets.
-#   0aa7 PRO Wireless · 0aaa/0aba PRO X Wireless LIGHTSPEED receiver · 0abb PRO X charging cable
-KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0aa7|0aaa|0aba|0abb", TAG+="uaccess"
+# OpenLogi Headset: let the logged-in user talk HID++ to supported Logitech headsets
+# (PRO X Wireless, PRO Wireless, PRO X 2 LIGHTSPEED (HID++), G633 / G635 / G933 / G935, G733 LIGHTSPEED, G533 Wireless, G535 LIGHTSPEED, G431 / G432 / G433).
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0a5b|0a5c|0a66|0a6d|0a87|0a89|0a9b|0a9c|0aa7|0aaa|0ab5|0aba|0abb|0ac4|0afb|0afc|0afe|0b1f", TAG+="uaccess"

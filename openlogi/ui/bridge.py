@@ -36,6 +36,7 @@ class HeadsetBridge(QObject, ServiceListener):
     sidetoneChanged = pyqtSignal(int)
     equalizerChanged = pyqtSignal(list)
     cableChanged = pyqtSignal(bool)
+    autoOffChanged = pyqtSignal(int)
     errorOccurred = pyqtSignal(str)
 
     def __init__(self, battery_interval: float, parent: QObject | None = None):
@@ -81,6 +82,9 @@ class HeadsetBridge(QObject, ServiceListener):
 
     def on_equalizer(self, gains: list[int]) -> None:
         self.equalizerChanged.emit(list(gains))
+
+    def on_auto_off(self, minutes: int) -> None:
+        self.autoOffChanged.emit(minutes)
 
     def on_cable(self, connected: bool) -> None:
         self.cableChanged.emit(connected)
@@ -213,7 +217,7 @@ class AudioManager(QObject):
         self._worker.submit(f"default-{kind}", lambda: pulse.set_default(kind, name))
 
     # -- effects -------------------------------------------------------------------------
-    def apply_voice(self, cfg: VoiceSettings, description: str = "PRO X · Voice") -> None:
+    def apply_voice(self, cfg: VoiceSettings, description: str = "OpenLogi · Voice") -> None:
         self._voice_cfg = replace(cfg)
         mic = self.state.source.name if self.state.source else None
         snapshot = self._voice_cfg
@@ -231,7 +235,7 @@ class AudioManager(QObject):
 
         self._worker.submit("voice", job)
 
-    def apply_surround(self, cfg: SurroundSettings, description: str = "PRO X · 7.1 Surround") -> None:
+    def apply_surround(self, cfg: SurroundSettings, description: str = "OpenLogi · 7.1 Surround") -> None:
         self._surround_cfg = replace(cfg)
         sink = self.state.sink.name if self.state.sink else None
         snapshot = self._surround_cfg

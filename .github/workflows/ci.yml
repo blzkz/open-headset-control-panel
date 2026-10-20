@@ -18,6 +18,11 @@ jobs:
       - run: python -m pip install ruff
       - run: ruff check --select F,E9,B openlogi tests
       - run: python -m unittest discover -s tests -v
+      - name: Web app builds and its JavaScript parses
+        run: |
+          python tools/build_web.py build/web
+          # .mjs so older Node versions parse the files as ES modules
+          for f in build/web/js/*.js; do cp "$f" "${f%.js}.mjs"; node --check "${f%.js}.mjs"; done
 
   packages:
     name: Packages

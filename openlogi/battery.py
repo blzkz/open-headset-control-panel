@@ -26,22 +26,9 @@ from bisect import bisect_left
 from dataclasses import dataclass
 from pathlib import Path
 
-# (millivolts, percent) open-circuit discharge curve, ascending voltage.
-DISCHARGE_CURVE: tuple[tuple[int, float], ...] = (
-    (3320, 0.0),
-    (3550, 2.0),
-    (3670, 5.0),
-    (3710, 12.0),
-    (3740, 20.0),
-    (3780, 30.0),
-    (3805, 40.0),
-    (3830, 50.0),
-    (3880, 60.0),
-    (3940, 70.0),
-    (4000, 80.0),
-    (4075, 90.0),
-    (4150, 100.0),
-)
+from .models import CURVE_PRO_X, Curve
+
+DISCHARGE_CURVE: Curve = CURVE_PRO_X
 
 CHARGING_OFFSET_MV = 170  # measured: charge voltage minus resting voltage
 FULL_HOURS = 20.0  # Logitech's rated battery life
@@ -51,16 +38,16 @@ FULL_CHARGE_MV = 4180  # CV phase reached: the cell is (almost) full
 CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "openlogi-headset"
 
 
-def percent_from_millivolts(mv: float, charging: bool = False) -> float:
+def percent_from_millivolts(mv: float, charging: bool = False, curve: Curve = DISCHARGE_CURVE) -> float:
     if charging:
         mv -= CHARGING_OFFSET_MV
-    volts = [v for v, _ in DISCHARGE_CURVE]
+    volts = [v for v, _ in curve]
     if mv <= volts[0]:
         return 0.0
     if mv >= volts[-1]:
         return 100.0
     i = bisect_left(volts, mv)
-    (v0, p0), (v1, p1) = DISCHARGE_CURVE[i - 1], DISCHARGE_CURVE[i]
+    (v0, p0), (v1, p1) = curve[i - 1], curve[i]
     return p0 + (p1 - p0) * (mv - v0) / (v1 - v0)
 
 
@@ -93,8 +80,9 @@ class BatteryEstimator:
     # with the app closed (e.g. charging overnight) the real level is anything.
     STALE_S = 10 * 60
 
-    def __init__(self, alpha: float = 0.3, state_file: Path | None = None):
+    def __init__(self, alpha: float = 0.3, state_file: Path | None = None, curve: Curve = DISCHARGE_CURVE):
         self.alpha = alpha
+        self.curve = curve
         self.state_file = state_file
         self._pct: float | None = None
         self._mv: float | None = None
@@ -169,7 +157,7 @@ class BatteryEstimator:
         # 2. update the estimate
         if self._charging:
             if self._pct is None:
-                self._pct = 100.0 if complete else percent_from_millivolts(millivolts, charging=True)
+                self._pct = 100.0 if complete else percent_from_millivolts(millivolts, charging=True, curve=self.curve)
             else:
                 self._pct += dt / 3600.0 / CHARGE_HOURS * 100.0
             full = complete or (not settling and millivolts >= FULL_CHARGE_MV)
@@ -178,7 +166,7 @@ class BatteryEstimator:
             full = False
             if not settling:
                 self._mv = float(millivolts) if self._mv is None else self._mv + self.alpha * (millivolts - self._mv)
-                est = percent_from_millivolts(self._mv)
+                est = percent_from_millivolts(self._mv, curve=self.curve)
                 if self._pct is None or est <= self._pct:
                     self._pct = est
                     self._raise_votes = 0
@@ -189,7 +177,7 @@ class BatteryEstimator:
                 else:
                     self._raise_votes = 0
             elif self._pct is None:
-                self._pct = percent_from_millivolts(millivolts)
+                self._pct = percent_from_millivolts(millivolts, curve=self.curve)
 
         self._save(now)
         return BatteryState(round(self._pct), millivolts, bool(self._charging), full)

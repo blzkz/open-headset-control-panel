@@ -151,7 +151,7 @@ def selftest() -> int:
     ctl = Controller(config)
     window = MainWindow(ctl)
     window.show()
-    for page in range(5):
+    for page in range(6):
         window.open_device_page(page)
     assert not tray_icon(None, False).isNull()
     assert not window.grab().isNull()

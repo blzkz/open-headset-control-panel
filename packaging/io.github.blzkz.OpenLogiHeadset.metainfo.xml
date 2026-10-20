@@ -4,7 +4,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>OpenLogi Headset</name>
-  <summary>G HUB-style control panel for Logitech PRO X Wireless headsets</summary>
+  <summary>G HUB-style control panel for Logitech gaming headsets</summary>
   <summary xml:lang="es">Panel de control estilo G HUB para auriculares Logitech PRO X Wireless</summary>
   <description>
     <p>Configure the Logitech G PRO X Wireless LIGHTSPEED headset on Linux: 10-band onboard equalizer,
@@ -27,8 +27,24 @@
     </screenshot>
   </screenshots>
   <provides>
-    <modalias>usb:v046Dp0ABA*</modalias>
+    <modalias>usb:v046Dp0A5B*</modalias>
+    <modalias>usb:v046Dp0A5C*</modalias>
+    <modalias>usb:v046Dp0A66*</modalias>
+    <modalias>usb:v046Dp0A6D*</modalias>
+    <modalias>usb:v046Dp0A87*</modalias>
+    <modalias>usb:v046Dp0A89*</modalias>
+    <modalias>usb:v046Dp0A9B*</modalias>
+    <modalias>usb:v046Dp0A9C*</modalias>
+    <modalias>usb:v046Dp0AA7*</modalias>
     <modalias>usb:v046Dp0AAA*</modalias>
+    <modalias>usb:v046Dp0AB5*</modalias>
+    <modalias>usb:v046Dp0ABA*</modalias>
+    <modalias>usb:v046Dp0ABB*</modalias>
+    <modalias>usb:v046Dp0AC4*</modalias>
+    <modalias>usb:v046Dp0AFB*</modalias>
+    <modalias>usb:v046Dp0AFC*</modalias>
+    <modalias>usb:v046Dp0AFE*</modalias>
+    <modalias>usb:v046Dp0B1F*</modalias>
   </provides>
   <categories>
     <category>AudioVideo</category>

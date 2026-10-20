@@ -1,0 +1,52 @@
+# Builds the WebHID web app (web/ + model registry + product images) and publishes it on GitHub Pages.
+name: Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "tools/build_web.py"
+      - "openlogi/__init__.py"
+      - "openlogi/models.py"
+      - "openlogi/presets.py"
+      - "openlogi/assets/**"
+      - "packaging/70-openlogi-headset.rules"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build site
+        run: |
+          python -m pip install pillow
+          python tools/build_web.py _site
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

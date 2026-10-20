@@ -7,11 +7,13 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from .models import ALL_PIDS
+
 RULE_NAME = "70-openlogi-headset.rules"
 RULE = (
-    "# OpenLogi Headset: let the logged-in user talk HID++ to Logitech PRO (X) Wireless headsets.\n"
+    "# OpenLogi Headset: let the logged-in user talk HID++ to supported Logitech headsets.\n"
     'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", '
-    'ATTRS{idProduct}=="0aa7|0aaa|0aba|0abb", TAG+="uaccess"\n'
+    f'ATTRS{{idProduct}}=="{"|".join(f"{pid:04x}" for pid in ALL_PIDS)}", TAG+="uaccess"\n'
 )
 
 

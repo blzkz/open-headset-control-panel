@@ -186,6 +186,21 @@ QPushButton#Ghost {{
 }}
 QPushButton#Ghost:hover {{ color: {TEXT}; border-color: {TEXT3}; }}
 
+/* segmented choice (lighting effect) */
+QPushButton#Segment {{
+    background: {BG3};
+    border: 1px solid {BG4};
+    border-radius: 6px;
+    padding: 8px 18px;
+    color: {TEXT2};
+}}
+QPushButton#Segment:hover {{ color: {TEXT}; border-color: #3a3a40; }}
+QPushButton#Segment:checked {{
+    background: rgba(0, 180, 245, 0.14);
+    border-color: {ACCENT};
+    color: {TEXT};
+}}
+
 /* preset list */
 QPushButton#Preset {{
     background: transparent;

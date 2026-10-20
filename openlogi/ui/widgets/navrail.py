@@ -86,13 +86,17 @@ class NavRail(QFrame):
         self._buttons: list[RailButton] = []
         self._current = -1
 
-    def add_item(self, icon_name: str, tooltip: str, bottom: bool = False) -> int:
+    def add_item(self, icon_name: str, tooltip: str, bottom: bool = False, position: int = -1) -> int:
         index = len(self._buttons)
         btn = RailButton(icon_name, tooltip, self)
         btn.clicked.connect(lambda _=False, i=index: self._clicked(i))
-        (self._bottom if bottom else self._top).addWidget(btn)
+        (self._bottom if bottom else self._top).insertWidget(position, btn)
         self._buttons.append(btn)
         return index
+
+    def set_item_visible(self, index: int, visible: bool) -> None:
+        self._buttons[index].setVisible(visible)
+        QTimer.singleShot(0, self._snap)  # neighbours moved
 
     def current(self) -> int:
         return self._current

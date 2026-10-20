@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenLogi HUB · Web</title>
+  <meta name="description" content="Control Logitech PRO X Wireless, G733, G935, G535 and other HID++ headsets from the browser with WebHID: equalizer, sidetone, lighting, auto power-off and battery.">
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="css/app.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <header class="titlebar">
+    <button class="icon-btn back" id="backBtn" hidden aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="brand"><b>OPENLOGI</b><span>HUB</span><em>WEB</em></div>
+    <button class="profile-btn" id="profileBtn" hidden>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+      <span class="cap" data-i18n="Profile">Profile</span>
+      <span class="val" id="profileName">DEFAULT</span>
+      <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="actions">
+      <a class="ghost small" id="desktopLink" href="https://github.com/blzkz/openLogiHeadsetControlPanel/releases/latest" target="_blank" rel="noopener" data-i18n="Desktop app">Desktop app</a>
+      <button class="primary small" id="connectBtn" data-i18n="Connect headset">Connect headset</button>
+      <button class="ghost small" id="disconnectBtn" hidden data-i18n="Disconnect">Disconnect</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- landing ------------------------------------------------------------------------- -->
+    <section id="landing" class="landing">
+      <div class="stage">
+        <img id="heroImg" alt="" src="">
+      </div>
+      <h1 class="h1" data-i18n="Control your Logitech headset from the browser">Control your Logitech headset from the browser</h1>
+      <p class="muted lead" data-i18n="Equalizer, sidetone, lighting, auto power-off and battery over WebHID — nothing to install.">…</p>
+      <button class="primary big" id="connectBig" data-i18n="Connect headset">Connect headset</button>
+      <p class="banner" id="noHid" hidden data-i18n="Your browser does not support WebHID. Use Chrome, Edge, Brave or Opera on desktop.">…</p>
+      <p class="faint" id="linuxNote" hidden>
+        <span data-i18n="On Linux the browser needs permission to open the headset:">…</span>
+        <a href="70-openlogi-headset.rules" download data-i18n="download the udev rule">download the udev rule</a>
+        <code>sudo install -m644 70-openlogi-headset.rules /etc/udev/rules.d/ &amp;&amp; sudo udevadm control --reload &amp;&amp; sudo udevadm trigger</code>
+      </p>
+      <h3 class="h3" data-i18n="Supported headsets">Supported headsets</h3>
+      <div class="models" id="modelList"></div>
+      <p class="faint small-print">
+        <span data-i18n="Want voice enhancement, 7.1 surround, a tray icon and profiles applied automatically? Get the desktop app.">…</span>
+        · <span id="version"></span> · Not affiliated with Logitech. Product images © Logitech.
+      </p>
+    </section>
+
+    <!-- device ------------------------------------------------------------------------------ -->
+    <section id="app" class="app" hidden>
+      <nav class="rail" id="rail">
+        <div class="indicator" id="railIndicator"></div>
+        <button data-page="eq" data-i18n-title="Equalizer"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg></button>
+        <button data-page="mic" data-i18n-title="Microphone"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8"/></svg></button>
+        <button data-page="light" data-i18n-title="Lighting" hidden><svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg></button>
+        <button data-page="device" data-i18n-title="Device"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5M12 8h.01"/></svg></button>
+      </nav>
+      <div class="content">
+        <div class="dev-header">
+          <div>
+            <h1 class="h1 dev-name" id="devName">—</h1>
+            <h3 class="h3" id="sectionName"></h3>
+          </div>
+          <div class="status">
+            <span class="chip warn" id="expChip" hidden data-i18n="Experimental support">Experimental support</span>
+            <span class="status-text" id="statusText"></span>
+            <span class="battery" id="battIcon"><i></i></span>
+            <span class="batt-pct" id="battPct">—</span>
+          </div>
+        </div>
+
+        <div class="pages">
+          <!-- equalizer -->
+          <div class="page eq-page" data-page="eq">
+            <aside class="presets">
+              <h3 class="h3" data-i18n="Presets">Presets</h3>
+              <div class="preset-list" id="presetList"></div>
+              <div class="preset-actions">
+                <button class="ghost" id="savePreset" data-i18n="Save as preset…">Save as preset…</button>
+                <button class="ghost" id="deletePreset" hidden data-i18n="Delete preset">Delete preset</button>
+              </div>
+            </aside>
+            <div class="eq-area">
+              <div class="eq-head">
+                <div>
+                  <h2 class="h2" data-i18n="Equalizer">Equalizer</h2>
+                  <p class="faint" data-i18n="Onboard 10-band equalizer · stored in the headset">…</p>
+                </div>
+                <div class="eq-head-right">
+                  <span class="preset-name" id="presetName"></span>
+                  <button class="ghost" id="resetEq" data-i18n="Reset">Reset</button>
+                </div>
+              </div>
+              <p class="banner" id="noEq" hidden data-i18n="This model has no onboard equalizer">…</p>
+              <canvas id="eqCanvas" class="eq-canvas"></canvas>
+              <p class="faint center" data-i18n="Drag the points, use the mouse wheel or arrow keys. Double-click resets a band.">…</p>
+            </div>
+          </div>
+
+          <!-- microphone / sidetone -->
+          <div class="page grid2" data-page="mic">
+            <div class="card">
+              <h2 class="h2" data-i18n="Sidetone">Sidetone</h2>
+              <p class="faint" data-i18n="Hear your own voice in the headset">…</p>
+              <label class="slider-row"><span data-i18n="Level">Level</span><b id="sidetoneVal">0%</b></label>
+              <input type="range" id="sidetone" min="0" max="100" value="0">
+              <p class="banner" id="noSidetone" hidden data-i18n="This model has no sidetone control">…</p>
+            </div>
+          </div>
+
+          <!-- lighting -->
+          <div class="page grid2 light-page" data-page="light">
+            <div class="card">
+              <h2 class="h2" data-i18n="Lighting">Lighting</h2>
+              <p class="faint" data-i18n="Applies to every lighting zone of the headset">…</p>
+              <span class="muted" data-i18n="Effect">Effect</span>
+              <div class="segments" id="lightModes">
+                <button data-mode="off" data-i18n="Off">Off</button>
+                <button data-mode="static" data-i18n="Static">Static</button>
+                <button data-mode="breathing" data-i18n="Breathing">Breathing</button>
+              </div>
+              <span class="muted" data-i18n="Colour">Colour</span>
+              <div class="swatches" id="swatches"></div>
+              <label class="slider-row"><span data-i18n="Brightness">Brightness</span><b id="brightVal">100%</b></label>
+              <input type="range" id="brightness" min="1" max="100" value="100">
+            </div>
+            <div class="card stage-card"><div class="stage small" id="lightStage"><img id="lightImg" alt=""></div></div>
+          </div>
+
+          <!-- device -->
+          <div class="page grid2 device-page" data-page="device">
+            <div class="stack">
+              <div class="card">
+                <h2 class="h2" data-i18n="Device information">Device information</h2>
+                <dl class="kv" id="infoKv"></dl>
+              </div>
+              <div class="card" id="powerCard" hidden>
+                <h2 class="h2" data-i18n="Power">Power</h2>
+                <div class="row">
+                  <div><div data-i18n="Auto power-off">Auto power-off</div>
+                    <div class="faint" data-i18n="Turn the headset off after this long without audio">…</div></div>
+                  <select id="autoOff"></select>
+                </div>
+              </div>
+              <div class="card">
+                <h2 class="h2" data-i18n="Battery">Battery</h2>
+                <div class="big-batt"><span class="battery large" id="battIconBig"><i></i></span><span class="big" id="battBig">—</span></div>
+                <p class="muted" id="battDetail"></p>
+                <dl class="kv" id="battKv"></dl>
+              </div>
+              <div class="card">
+                <h2 class="h2" data-i18n="HID++ features">HID++ features</h2>
+                <dl class="kv mono" id="featKv"></dl>
+              </div>
+            </div>
+            <div class="card stage-card"><div class="stage" id="devStage"><img id="devImg" alt=""></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="popup" id="popup" hidden></div>
+  <dialog id="dialog"><form method="dialog"><h3 id="dlgTitle"></h3><label id="dlgLabel"></label><input id="dlgInput" autocomplete="off"><div class="dlg-actions"><button value="cancel" class="ghost">✕</button><button value="ok" class="primary">OK</button></div></form></dialog>
+  <div class="toast" id="toast" hidden></div>
+</body>
+</html>

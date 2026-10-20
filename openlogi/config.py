@@ -65,6 +65,22 @@ class SurroundSettings:
 
 
 @dataclass(slots=True)
+class LightingSettings:
+    """RGB lighting for models with the 0x8070 colour-LED feature (all zones alike)."""
+
+    mode: str = "static"  # off | static | breathing
+    color: str = "#00b4f5"
+    brightness: int = 100
+
+    def rgb(self) -> tuple[int, int, int]:
+        try:
+            raw = bytes.fromhex(self.color.lstrip("#")[:6])
+            return raw[0], raw[1], raw[2]
+        except (ValueError, IndexError):
+            return 0, 180, 245
+
+
+@dataclass(slots=True)
 class Profile:
     name: str = "Default"
     eq_preset: str = "flat"
@@ -72,6 +88,7 @@ class Profile:
     sidetone: int = 0
     voice: VoiceSettings = field(default_factory=VoiceSettings)
     surround: SurroundSettings = field(default_factory=SurroundSettings)
+    lighting: LightingSettings = field(default_factory=LightingSettings)
 
 
 @dataclass(slots=True)
@@ -98,6 +115,7 @@ class Config:
     active_profile: str = "Default"
     profiles: dict[str, Profile] = field(default_factory=lambda: {"Default": Profile()})
     user_eq_presets: dict[str, list[int]] = field(default_factory=dict)
+    auto_off_minutes: int | None = None  # None: leave the headset's own setting alone
 
     # -- profile helpers -------------------------------------------------------
     @property
@@ -147,6 +165,8 @@ class Config:
                 if len(prof.eq_gains) != 10:
                     prof.eq_gains = [0] * 10
                 cfg.profiles[name] = prof
+        auto_off = data.get("auto_off_minutes")
+        cfg.auto_off_minutes = int(auto_off) if isinstance(auto_off, (int, float)) else None
         presets = data.get("user_eq_presets")
         if isinstance(presets, dict):
             cfg.user_eq_presets = {

@@ -103,6 +103,10 @@ class EqualizerPage(QWidget):
         area.addLayout(top)
         area.addSpacing(10)
 
+        self.no_eq = label(tr("This model has no onboard equalizer"), "Banner")
+        self.no_eq.hide()
+        area.addWidget(self.no_eq)
+
         self.graph = EqualizerGraph()
         self.graph.gainsChanged.connect(lambda g: self.ctl.set_eq(g))
         self.graph.gainsCommitted.connect(lambda g: self.ctl.set_eq(g))
@@ -156,6 +160,7 @@ class EqualizerPage(QWidget):
         self._sync_selection(key)
 
     def _on_device(self, snap) -> None:
+        self._on_state(self.ctl.bridge.state, "")
         if snap.eq_info:
             self.graph.set_bands(snap.eq_info.frequencies, snap.eq_info.db_range)
             self.graph.set_gains(self.ctl.profile.eq_gains, animate=False)
@@ -164,6 +169,7 @@ class EqualizerPage(QWidget):
         # Editing stays possible offline: the profile is applied when the headset connects.
         dev = self.ctl.bridge.device
         self.graph.setEnabled(dev is None or dev.has_equalizer)
+        self.no_eq.setVisible(dev is not None and not dev.has_equalizer)
         self.preset_name.setToolTip("" if state is LinkState.CONNECTED else tr("Headset off"))
 
     def _save_preset(self) -> None:

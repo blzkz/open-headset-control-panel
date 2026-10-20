@@ -22,6 +22,8 @@ class Controller(QObject):
     surroundChanged = pyqtSignal()
     userPresetsChanged = pyqtSignal()
     settingsChanged = pyqtSignal()
+    lightingChanged = pyqtSignal()
+    autoOffChanged = pyqtSignal(int)
 
     def __init__(self, config: Config, parent: QObject | None = None):
         super().__init__(parent)
@@ -35,6 +37,7 @@ class Controller(QObject):
         self.bridge.sidetoneChanged.connect(self._device_sidetone)
         self.bridge.equalizerChanged.connect(self._device_eq)
         self.bridge.deviceChanged.connect(self._device_info)
+        self.bridge.autoOffChanged.connect(self.autoOffChanged)
         self._push_desired()
 
     # -- lifecycle --------------------------------------------------------------------
@@ -56,16 +59,23 @@ class Controller(QObject):
     def schedule_save(self) -> None:
         self._save_timer.start()
 
+    def _lights_payload(self) -> dict[int, tuple[int, tuple[int, int, int], int]]:
+        light = self.profile.lighting
+        mode = {"off": 0, "static": 1, "breathing": 2}.get(light.mode, 1)
+        # the service only sends zones the connected model actually has
+        return {zone: (mode, light.rgb(), light.brightness) for zone in (0, 1)}
+
     def _push_desired(self) -> None:
         prof = self.profile
         if self.config.app.apply_on_connect:
-            self.bridge.service.set_desired_state(prof.sidetone, prof.eq_gains)
+            self.bridge.service.set_desired_state(prof.sidetone, prof.eq_gains,
+                                                  self.config.auto_off_minutes, self._lights_payload())
         else:
             self.bridge.service.set_desired_state(None, None)
 
     def _apply_effects(self) -> None:
-        self.audio.apply_voice(self.profile.voice, "PRO X · " + tr("Voice enhancement"))
-        self.audio.apply_surround(self.profile.surround, "PRO X · " + tr("Virtual 7.1 surround"))
+        self.audio.apply_voice(self.profile.voice, "OpenLogi · " + tr("Voice enhancement"))
+        self.audio.apply_surround(self.profile.surround, "OpenLogi · " + tr("Virtual 7.1 surround"))
 
     # -- device feedback ------------------------------------------------------------------
     def _device_info(self, snap) -> None:
@@ -131,6 +141,22 @@ class Controller(QObject):
         self.eqChanged.emit(list(self.profile.eq_gains), self.profile.eq_preset)
         self.schedule_save()
 
+    # -- device power / lighting ----------------------------------------------------------------
+    def set_auto_off(self, minutes: int) -> None:
+        self.config.auto_off_minutes = int(minutes)
+        self._push_desired()
+        self.bridge.service.set_auto_off(minutes)
+        self.schedule_save()
+
+    def update_lighting(self, **changes) -> None:
+        light = self.profile.lighting
+        for k, val in changes.items():
+            setattr(light, k, val)
+        self._push_desired()
+        self.bridge.service.set_lights(self._lights_payload())
+        self.lightingChanged.emit()
+        self.schedule_save()
+
     # -- voice / surround -------------------------------------------------------------------
     def update_voice(self, **changes) -> None:
         v = self.profile.voice
@@ -140,7 +166,7 @@ class Controller(QObject):
         for k, val in changes.items():
             setattr(v, k, val)
         v.preset = voice_matches_preset(v)
-        self.audio.apply_voice(v, "PRO X · " + tr("Voice enhancement"))
+        self.audio.apply_voice(v, "OpenLogi · " + tr("Voice enhancement"))
         self.voiceChanged.emit()
         self.schedule_save()
 
@@ -148,7 +174,7 @@ class Controller(QObject):
         s = self.profile.surround
         for k, val in changes.items():
             setattr(s, k, val)
-        self.audio.apply_surround(s, "PRO X · " + tr("Virtual 7.1 surround"))
+        self.audio.apply_surround(s, "OpenLogi · " + tr("Virtual 7.1 surround"))
         self.surroundChanged.emit()
         self.schedule_save()
 
@@ -162,12 +188,14 @@ class Controller(QObject):
         if self.bridge.state is LinkState.CONNECTED:
             self.bridge.service.set_sidetone(prof.sidetone)
             self.bridge.service.set_equalizer(prof.eq_gains)
+            self.bridge.service.set_lights(self._lights_payload())
         self._apply_effects()
         self.profileChanged.emit()
         self.eqChanged.emit(list(prof.eq_gains), prof.eq_preset)
         self.sidetoneChanged.emit(prof.sidetone)
         self.voiceChanged.emit()
         self.surroundChanged.emit()
+        self.lightingChanged.emit()
         self.schedule_save()
 
     def new_profile(self, name: str, copy_current: bool) -> None:

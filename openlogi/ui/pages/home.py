@@ -98,8 +98,13 @@ class HomePage(QWidget):
         chips.addStretch(1)
         self.link_chip = StatusPill("wireless", "LIGHTSPEED")
         self.charge_chip = StatusPill("bolt", tr("Charging").upper())
+        self.exp_chip = StatusPill("info", tr("Experimental support").upper())
+        self.exp_chip.setToolTip(tr("This model has not been tested on real hardware yet. If something misbehaves, "
+                                    "open an issue with the output of “openlogi-headsetctl --diagnose”."))
+        self.exp_chip.hide()
         chips.addWidget(self.link_chip)
         chips.addWidget(self.charge_chip)
+        chips.addWidget(self.exp_chip)
         chips.addStretch(1)
         root.addLayout(chips)
         root.addSpacing(14)
@@ -122,7 +127,7 @@ class HomePage(QWidget):
         b = ctl.bridge
         b.stateChanged.connect(self._on_state)
         b.batteryChanged.connect(self._on_battery)
-        b.deviceChanged.connect(lambda d: self.name.setText(d.model.upper()))
+        b.deviceChanged.connect(self._on_device)
         self._on_state(b.state, "")
         self.charge_chip.hide()
 
@@ -152,6 +157,12 @@ class HomePage(QWidget):
             self.batt_pct.setText("—")
             self.batt_detail.setText("")
             self.charge_chip.hide()
+
+    def _on_device(self, d) -> None:
+        self.name.setText(d.model.upper())
+        self.view.set_image(d.image)
+        self.exp_chip.setVisible(not d.verified)
+        self.exp_chip.set_active(True)
 
     def _grant_access(self) -> None:
         ok, msg = install_rule()

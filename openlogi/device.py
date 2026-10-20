@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
+from enum import Enum
 
 from .hidpp import (
     FeatureId,
     FeatureNotSupported,
     Hidpp20Device,
+    HidppError,
     HidrawInfo,
     HidrawTransport,
     enumerate_hidraw,
@@ -16,41 +17,46 @@ from .hidpp import (
 from .hidpp.features import (
     AdcBattery,
     AdcReading,
+    AutoOff,
+    ColorLeds,
     DeviceIdentity,
     Equalizer,
     EqualizerInfo,
+    LevelReading,
     Sidetone,
+    read_battery_status,
     read_firmware,
     read_name,
+    read_unified_battery,
 )
 from .hidpp.protocol import SOFTWARE_ID_GUI, NotificationHandler
+from .models import BY_PID, ModelSpec
 
 LOGITECH_VID = 0x046D
 
-
-@dataclass(frozen=True, slots=True)
-class ModelSpec:
-    name: str
-    image: str
-    # Product id that shows up when the headset itself is plugged in with its
-    # USB charge cable (it then enumerates as a "Battery Charger").
-    charger_pid: int | None = None
+# Back-compat alias: product id → model.
+SUPPORTED_MODELS = BY_PID
 
 
-SUPPORTED_MODELS: dict[int, ModelSpec] = {
-    0x0ABA: ModelSpec("PRO X Wireless", "headset-34-left.png", charger_pid=0x0ABB),
-    0x0AAA: ModelSpec("PRO X Wireless", "headset-34-left.png", charger_pid=0x0ABB),
-    0x0AA7: ModelSpec("PRO Wireless", "headset-34-left.png"),
-}
+def _usb_device_key(info: HidrawInfo) -> str:
+    """Identify the physical USB device (all its interfaces share this prefix)."""
+    return info.phys.rsplit("/input", 1)[0]
 
 
 def find_receivers() -> list[HidrawInfo]:
-    """HID++-capable hidraw nodes of supported Logitech headset receivers."""
-    return [
-        info
-        for info in enumerate_hidraw(LOGITECH_VID)
-        if info.hidpp and info.product_id in SUPPORTED_MODELS
-    ]
+    """One HID++ hidraw node per connected supported headset/receiver.
+
+    A device may expose HID++ long reports on several interfaces; the one inside the
+    Logitech vendor collection is preferred.
+    """
+    best: dict[str, HidrawInfo] = {}
+    for info in enumerate_hidraw(LOGITECH_VID):
+        if not info.hidpp or info.product_id not in BY_PID:
+            continue
+        key = _usb_device_key(info)
+        if key not in best or (info.vendor_page and not best[key].vendor_page):
+            best[key] = info
+    return sorted(best.values(), key=lambda i: (not BY_PID[i.product_id].verified, i.path))
 
 
 def charge_cable_connected(spec: ModelSpec) -> bool:
@@ -59,20 +65,20 @@ def charge_cable_connected(spec: ModelSpec) -> bool:
     return any(info.product_id == spec.charger_pid for info in enumerate_hidraw(LOGITECH_VID))
 
 
-def usb_device_path(info: HidrawInfo) -> str:
-    """Resolve the sysfs USB device directory for a hidraw node (for udev/power info)."""
-    node = Path("/sys/class/hidraw") / Path(info.path).name / "device"
-    try:
-        return str(node.resolve().parent.parent)
-    except OSError:
-        return ""
+class BatterySource(Enum):
+    NONE = "none"
+    ADC = "adc"  # cell voltage, percentage estimated by us
+    UNIFIED = "unified"  # 0x1004, percentage from the device
+    STATUS = "status"  # 0x1000, percentage from the device
 
 
 @dataclass(slots=True)
 class Capabilities:
     sidetone: bool = False
     equalizer: bool = False
-    battery: bool = False
+    battery: BatterySource = BatterySource.NONE
+    auto_off: bool = False
+    lights: bool = False
     features: list[tuple[int, int, int, int]] = field(default_factory=list)
 
 
@@ -81,13 +87,15 @@ class Headset:
 
     def __init__(self, info: HidrawInfo, dev: Hidpp20Device):
         self.info = info
-        self.spec = SUPPORTED_MODELS[info.product_id]
+        self.spec = BY_PID[info.product_id]
         self.dev = dev
         self.identity = DeviceIdentity()
         self.caps = Capabilities()
         self.sidetone = Sidetone(dev)
         self.equalizer = Equalizer(dev)
         self.battery = AdcBattery(dev)
+        self.auto_off = AutoOff(dev)
+        self.leds = ColorLeds(dev)
         self.eq_info: EqualizerInfo | None = None
 
     @classmethod
@@ -108,7 +116,19 @@ class Headset:
         ids = {fid for _, fid, _, _ in self.caps.features}
         self.caps.sidetone = FeatureId.SIDETONE in ids
         self.caps.equalizer = FeatureId.EQUALIZER in ids
-        self.caps.battery = FeatureId.ADC_MEASUREMENT in ids
+        self.caps.lights = FeatureId.COLOR_LED_EFFECTS in ids and bool(self.spec.light_zones)
+        if FeatureId.ADC_MEASUREMENT in ids:
+            self.caps.battery = BatterySource.ADC
+        elif FeatureId.UNIFIED_BATTERY in ids:
+            self.caps.battery = BatterySource.UNIFIED
+        elif FeatureId.BATTERY_STATUS in ids:
+            self.caps.battery = BatterySource.STATUS
+        if FeatureId.ADC_MEASUREMENT in ids:
+            try:  # only advertise the timer if the getter answers
+                self.auto_off.get()
+                self.caps.auto_off = True
+            except HidppError:
+                self.caps.auto_off = False
         try:
             self.identity.name, self.identity.kind = read_name(self.dev)
         except FeatureNotSupported:
@@ -120,8 +140,15 @@ class Headset:
         if self.caps.equalizer:
             self.eq_info = self.equalizer.info()
 
-    def read_battery(self) -> AdcReading | None:
-        return self.battery.read() if self.caps.battery else None
+    def read_battery(self) -> AdcReading | LevelReading | None:
+        src = self.caps.battery
+        if src is BatterySource.ADC:
+            return self.battery.read()
+        if src is BatterySource.UNIFIED:
+            return read_unified_battery(self.dev)
+        if src is BatterySource.STATUS:
+            return read_battery_status(self.dev)
+        return None
 
     def adc_feature_index(self) -> int:
         try:

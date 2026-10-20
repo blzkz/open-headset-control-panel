@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import IntEnum
 
-from .protocol import FeatureId, Hidpp20Device
+from .protocol import FeatureId, Hidpp20Device, Hidpp20ErrorCode, HidppDeviceError
 
 DEVICE_TYPES = {
     0: "Keyboard",
@@ -133,13 +134,14 @@ class EqualizerInfo:
 
 
 class Equalizer:
-    # setEQ "mode" byte; empirically 0x02 is the only value the PRO X accepts
-    # (0x00/0x01/0x03 return INVALID_ARGUMENT).
-    SET_MODE = 0x02
+    # setEQ "mode" byte: 0x02 is the only value the PRO X accepts (0x00/0x01/0x03
+    # return INVALID_ARGUMENT). Other models are unverified, so fall back in order.
+    SET_MODES = (0x02, 0x00, 0x01)
 
     def __init__(self, dev: Hidpp20Device):
         self.dev = dev
         self._info: EqualizerInfo | None = None
+        self._mode: int | None = None
 
     def info(self) -> EqualizerInfo:
         if self._info is None:
@@ -165,8 +167,17 @@ class Equalizer:
         if len(gains) != info.band_count:
             raise ValueError(f"expected {info.band_count} gains, got {len(gains)}")
         clamped = [max(info.db_min, min(info.db_max, round(g))) for g in gains]
-        payload = bytes((self.SET_MODE,)) + b"".join(g.to_bytes(1, "big", signed=True) for g in clamped)
-        self.dev.call(FeatureId.EQUALIZER, 3, payload)
+        body = b"".join(g.to_bytes(1, "big", signed=True) for g in clamped)
+        modes = (self._mode,) if self._mode is not None else self.SET_MODES
+        for i, mode in enumerate(modes):
+            try:
+                self.dev.call(FeatureId.EQUALIZER, 3, bytes((mode,)) + body)
+            except HidppDeviceError as exc:
+                if exc.code != Hidpp20ErrorCode.INVALID_ARGUMENT or i == len(modes) - 1:
+                    raise
+                continue
+            self._mode = mode
+            return clamped
         return clamped
 
 
@@ -196,3 +207,72 @@ class AdcBattery:
     @staticmethod
     def parse_event(payload: bytes) -> AdcReading:
         return AdcReading(int.from_bytes(payload[0:2], "big"), payload[2])
+
+
+# -- 0x1F20 functions 1/2: auto power-off --------------------------------------------------
+class AutoOff:
+    """Inactivity power-off timer in minutes (0 = never).
+
+    Lives in the ADC feature: fn1 reads it, fn2 writes it (verified on the PRO X
+    Wireless; HeadsetControl uses the same fn2 on the G533/G535).
+    """
+
+    MAX = 255
+
+    def __init__(self, dev: Hidpp20Device):
+        self.dev = dev
+
+    def get(self) -> int:
+        return self.dev.call(FeatureId.ADC_MEASUREMENT, 1)[0]
+
+    def set(self, minutes: int) -> int:
+        minutes = max(0, min(self.MAX, int(minutes)))
+        return self.dev.call(FeatureId.ADC_MEASUREMENT, 2, bytes((minutes,)))[0]
+
+
+# -- 0x1000 battery status / 0x1004 unified battery (percentage reported by the device) ----
+@dataclass(frozen=True, slots=True)
+class LevelReading:
+    percent: int
+    charging: bool
+    full: bool
+
+
+def read_battery_status(dev: Hidpp20Device) -> LevelReading:
+    """0x1000 getBatteryLevelStatus → [level %, next level %, status]."""
+    r = dev.call(FeatureId.BATTERY_STATUS, 0)
+    status = r[2]
+    return LevelReading(r[0], status in (1, 2, 4), status == 3)
+
+
+def read_unified_battery(dev: Hidpp20Device) -> LevelReading:
+    """0x1004 getStatus → [state of charge %, level flags, charging status, external power]."""
+    r = dev.call(FeatureId.UNIFIED_BATTERY, 1)
+    status = r[2]
+    return LevelReading(r[0], status in (1, 2), status == 3)
+
+
+# -- 0x8070 colour LED effects --------------------------------------------------------------
+class LightMode(IntEnum):
+    OFF = 0
+    STATIC = 1
+    BREATHING = 2
+
+
+class ColorLeds:
+    """Per-zone lighting through setZoneEffect (fn3), as used by G HUB on the G633/G933 family.
+
+    Packet layout (from g933-utils / HeadsetControl):
+    ``zone, mode, R, G, B, period_hi, period_lo, 0, brightness``.
+    """
+
+    def __init__(self, dev: Hidpp20Device):
+        self.dev = dev
+
+    def set_zone(self, zone: int, mode: LightMode, rgb: tuple[int, int, int] = (0, 180, 245),
+                 brightness: int = 100, period_ms: int = 4000) -> None:
+        r, g, b = (max(0, min(255, int(c))) for c in rgb)
+        period_ms = max(500, min(20000, int(period_ms)))
+        params = bytes((zone & 0xFF, int(mode), r, g, b, period_ms >> 8, period_ms & 0xFF, 0,
+                        max(1, min(100, int(brightness)))))
+        self.dev.call(FeatureId.COLOR_LED_EFFECTS, 3, params)
