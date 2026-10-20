@@ -8,6 +8,7 @@ const ES = {
     "Ecualizador, sidetone, iluminación, apagado automático y batería mediante WebHID, sin instalar nada.",
   "Supported headsets": "Auriculares compatibles",
   "experimental": "experimental",
+  "verified": "verificado",
   "Your browser does not support WebHID. Use Chrome, Edge, Brave or Opera on desktop.":
     "Tu navegador no es compatible con WebHID. Usa Chrome, Edge, Brave u Opera en un ordenador.",
   "On Linux the browser needs permission to open the headset:": "En Linux el navegador necesita permiso para abrir el auricular:",

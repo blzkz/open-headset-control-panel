@@ -125,7 +125,7 @@ function renderLanding() {
     el.querySelector("img").src = m.image;
     el.querySelector("span").textContent = m.name;
     const small = el.querySelector("small");
-    small.textContent = m.verified ? "✓ verified" : tr("experimental");
+    small.textContent = m.verified ? `✓ ${tr("verified")}` : tr("experimental");
     small.classList.toggle("ok", m.verified);
     list.append(el);
   }
