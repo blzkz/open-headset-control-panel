@@ -3,6 +3,13 @@
 An 8-channel virtual sink whose channels are each rendered through an HRTF
 (PipeWire's SOFA spatializer) at its loudspeaker position and down-mixed to
 binaural stereo on the headset.
+
+Bass management, like an AV receiver: the measured HRTFs carry almost no bass
+(the MIT KEMAR set is ~20 dB down at 60 Hz relative to 1 kHz), and low
+frequencies are not directional anyway. A Linkwitz-Riley crossover splits every
+channel: the highs go through the HRTF, the lows straight to both ears (the two
+branches sum in phase), and the LFE channel only takes the direct path instead
+of being "placed" in front of the listener.
 """
 
 from __future__ import annotations
@@ -53,11 +60,39 @@ def available_rooms() -> dict[str, Path]:
     return found
 
 
+CROSSOVER_HZ = 150.0
+# Level of the direct bass path relative to the HRTF path's gain: matches the midrange
+# level of the HRTFs (measured ~-5.5 dB at 1 kHz), so the overall response stays even.
+BASS_LEVEL = 0.66
+LFE_LEVEL = BASS_LEVEL * 10.0 ** (3.0 / 20.0)  # LFE content is mastered expecting a boost
+
+
 def build_surround_conf(s: SurroundSettings, sink_node: str, sofa: Path, description: str) -> str:
+    return build_conf(module_block("libpipewire-module-filter-chain", surround_args(s, sink_node, sofa, description)))
+
+
+def surround_args(s: SurroundSettings, sink_node: str, sofa: Path, description: str) -> dict:
+    """Arguments of the filter-chain module (the graph is inspected by the tests)."""
     gain = 10.0 ** (s.gain_db / 20.0) * 0.6  # headroom: 8 channels summed into 2
     nodes: list[dict] = []
     links: list[dict] = []
-    for i, (ch, az, el) in enumerate(CHANNELS, start=1):
+    inputs: list[str] = []
+    bass_gains: dict[str, float] = {}
+    spatial = [(ch, az, el) for ch, az, el in CHANNELS if ch != "LFE"]
+    def lr4(kind: str, name: str) -> None:
+        """4th-order Linkwitz-Riley half: two Butterworth biquads in series (``name``a → ``name``b)."""
+        for stage in "ab":
+            nodes.append({"type": "builtin", "label": f"bq_{kind}", "name": f"{name}{stage}",
+                          "control": {"Freq": CROSSOVER_HZ, "Q": 0.7071}})
+        links.append({"output": f"{name}a:Out", "input": f"{name}b:In"})
+
+    for i, (ch, _az, _el) in enumerate(CHANNELS, start=1):
+        lr4("lowpass", f"lp{ch}")
+        links.append({"output": f"lp{ch}b:Out", "input": f"bass:In {i}"})
+        bass_gains[f"Gain {i}"] = gain * (LFE_LEVEL if ch == "LFE" else BASS_LEVEL)
+    for i, (ch, az, el) in enumerate(spatial, start=1):
+        # one sink channel feeds two paths: the HRTF and the direct bass
+        nodes.append({"type": "builtin", "label": "copy", "name": f"in{ch}"})
         nodes.append(
             {
                 "type": "sofa",
@@ -67,18 +102,29 @@ def build_surround_conf(s: SurroundSettings, sink_node: str, sofa: Path, descrip
                 "control": {"Azimuth": az, "Elevation": el, "Radius": 3.0},
             }
         )
+        lr4("highpass", f"hp{ch}")
+        links.append({"output": f"in{ch}:Out", "input": f"hp{ch}a:In"})
+        links.append({"output": f"hp{ch}b:Out", "input": f"sp{ch}:In"})
+        links.append({"output": f"in{ch}:Out", "input": f"lp{ch}a:In"})
         links.append({"output": f"sp{ch}:Out L", "input": f"mixL:In {i}"})
         links.append({"output": f"sp{ch}:Out R", "input": f"mixR:In {i}"})
-    mix_ctl = {f"Gain {i}": gain for i in range(1, 9)}
+    bass_in = len(spatial) + 1
+    links.append({"output": "bass:Out", "input": f"mixL:In {bass_in}"})
+    links.append({"output": "bass:Out", "input": f"mixR:In {bass_in}"})
+    for ch, _az, _el in CHANNELS:
+        inputs.append(f"lp{ch}a:In" if ch == "LFE" else f"in{ch}:In")
+    mix_ctl = {f"Gain {i}": gain for i in range(1, bass_in)}
+    mix_ctl[f"Gain {bass_in}"] = 1.0
+    nodes.append({"type": "builtin", "label": "mixer", "name": "bass", "control": bass_gains})
     nodes.append({"type": "builtin", "label": "mixer", "name": "mixL", "control": mix_ctl})
-    nodes.append({"type": "builtin", "label": "mixer", "name": "mixR", "control": mix_ctl})
+    nodes.append({"type": "builtin", "label": "mixer", "name": "mixR", "control": dict(mix_ctl)})
     args = {
         "node.description": description,
         "media.name": description,
         "filter.graph": {
             "nodes": nodes,
             "links": links,
-            "inputs": [f"sp{ch}:In" for ch, _, _ in CHANNELS],
+            "inputs": inputs,
             "outputs": ["mixL:Out", "mixR:Out"],
         },
         "capture.props": {
@@ -98,7 +144,7 @@ def build_surround_conf(s: SurroundSettings, sink_node: str, sofa: Path, descrip
             "stream.dont-remix": True,
         },
     }
-    return build_conf(module_block("libpipewire-module-filter-chain", args))
+    return args
 
 
 class SurroundSink:
