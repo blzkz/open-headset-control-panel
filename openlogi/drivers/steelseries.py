@@ -349,10 +349,7 @@ class ArctisNova5(Nova):
     def set_eq_preset(self, h: Handle, preset: int) -> None:
         if not 0 <= preset < len(self.PRESET_VALUES):
             raise invalid("Device only supports presets 0-3")
-        try:
-            self.set_equalizer(h, list(self.PRESET_VALUES[preset]))
-        except DriverError:
-            pass  # the original ignores this result
+        self.set_equalizer(h, list(self.PRESET_VALUES[preset]))
 
     def set_equalizer(self, h: Handle, bands: list[float]) -> None:
         if len(bands) != 10:
@@ -462,10 +459,7 @@ class ArctisNova7(Nova):
     def set_eq_preset(self, h: Handle, preset: int) -> None:
         if not 0 <= preset < len(self.PRESET_VALUES):
             raise invalid("Device only supports presets 0-3")
-        try:
-            self.set_equalizer(h, list(self.PRESET_VALUES[preset]))
-        except DriverError:
-            pass
+        self.set_equalizer(h, list(self.PRESET_VALUES[preset]))
 
     def set_equalizer(self, h: Handle, bands: list[float]) -> None:
         if len(bands) != 10:
@@ -599,10 +593,7 @@ class ArctisNova3PWireless(Nova):
     def set_eq_preset(self, h: Handle, preset: int) -> None:
         if not 0 <= preset < len(self.PRESET_VALUES):
             raise invalid("Device only supports presets 0-3")
-        try:
-            self.set_equalizer(h, list(self.PRESET_VALUES[preset]))
-        except DriverError:
-            pass
+        self.set_equalizer(h, list(self.PRESET_VALUES[preset]))
 
     def set_equalizer(self, h: Handle, bands: list[float]) -> None:
         if len(bands) != 10:

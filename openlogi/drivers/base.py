@@ -172,6 +172,21 @@ def set_sleeper(fn) -> None:
     _sleep = fn
 
 
+_clock = None
+
+
+def monotonic_ms() -> int:
+    """Monotonic milliseconds; tests swap in a fake clock via ``set_clock``."""
+    import time
+
+    return int((_clock or time.monotonic)() * 1000)
+
+
+def set_clock(fn) -> None:
+    global _clock
+    _clock = fn
+
+
 # -- C++-faithful arithmetic ------------------------------------------------------------------------
 def cdiv(a: int, b: int) -> int:
     """Integer division truncating toward zero, as in C/C++."""
@@ -269,6 +284,9 @@ class Driver:
     EQ_PRESETS: tuple[tuple[str, tuple[float, ...]], ...] = ()
     WIRELESS: bool = True
     IMAGE: str = ""
+    # False when the original derives read timeouts from the wall clock (the golden test
+    # then compares bytes but not those clock-derived values)
+    TIMING_EXACT: bool = True
 
     def __init__(self, product_id: int = 0) -> None:
         self.product_id = product_id  # HeadsetControl's getMatchedProductId()
