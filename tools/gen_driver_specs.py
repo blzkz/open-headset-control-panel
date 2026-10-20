@@ -17,6 +17,7 @@ GOLDEN = ROOT / "tests" / "data" / "headsetcontrol_golden.json.gz"
 # Band layout read from the headset at run time; the golden file only has what the script replied.
 EQ_FROM_DEVICE = {"Logitech G PRO X 2 LIGHTSPEED"}
 OUT = ROOT / "openheadset" / "drivers" / "specs.py"
+OUT_JS = ROOT / "web" / "js" / "drivers" / "specs.js"
 
 
 def main() -> None:
@@ -65,6 +66,35 @@ def main() -> None:
     lines.append("}")
     OUT.write_text("\n".join(lines) + "\n")
     print(f"wrote {OUT} ({len(devices) - 1} devices)")
+    write_js(devices)
+
+
+def write_js(devices: list[dict]) -> None:
+    """Same data for the web app's driver ports."""
+    specs = {}
+    for d in devices:
+        if d["name"] == "HeadsetControl Test device":
+            continue
+        dynamic = d["name"] in EQ_FROM_DEVICE
+        e, p = d["eq"], d["peq"]
+        specs[d["name"]] = {
+            "vendor": d["vendor"],
+            "pids": d["pids"],
+            "caps": {c["cap"]: [c["usagepage"], c["usageid"], c["interface"]] for c in d["caps"]},
+            "eq": None if not e or dynamic else {"bands": e["bands"], "baseline": e["baseline"],
+                                                  "step": float(e["step"]), "min": e["min"], "max": e["max"]},
+            "peq": None if not p or dynamic else {k: p[k] for k in ("bands", "gain_base", "gain_step", "gain_min",
+                                                                     "gain_max", "q_min", "q_max", "freq_min",
+                                                                     "freq_max", "filter_types")},
+            "presets": [[x["name"], [float(v) for v in x["values"]]] for x in d["presets"]],
+            "presetCount": len({c["arg"] for c in d["calls"] if c["call"] == "eq_preset"}),
+        }
+    OUT_JS.parent.mkdir(parents=True, exist_ok=True)
+    OUT_JS.write_text("// Static per-device data generated from HeadsetControl (tools/gen_driver_specs.py). Do not edit.\n"
+                      "export const SPECS = {\n"
+                      + "".join(f" {json.dumps(k)}: {json.dumps(v, separators=(',', ':'))},\n" for k, v in specs.items())
+                      + "};\n")
+    print(f"wrote {OUT_JS}")
 
 
 _CAP_NAMES = {
