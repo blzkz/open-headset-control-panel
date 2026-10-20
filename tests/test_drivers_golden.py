@@ -28,19 +28,56 @@ from openlogi.drivers.base import (
 )
 
 GOLDEN = Path(__file__).with_name("data") / "headsetcontrol_golden.json.gz"
+SCRIPTS = Path(__file__).with_name("data") / "golden_scripts.txt"
 PATTERNS = ("zeros", "ramp", "ff", "echo")
 MAX_OPS = 48
+
+
+def load_scripts(path: Path = SCRIPTS) -> dict[str, list[tuple[str, list]]]:
+    """Scripted replies shared with the C++ harness: {device: [(variant, rules)]}.
+
+    A rule is (op, [(index, byte)], [reply bytes]); see tools/golden/README.md.
+    """
+    scripts: dict[str, list[tuple[str, list]]] = {}
+    rules: list = []
+    for raw in path.read_text().splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if line.startswith("["):
+            device, variant = line[1:].split("]", 1)
+            rules = []
+            scripts.setdefault(device, []).append((variant.strip(), rules))
+            continue
+        head, _, tail = line.partition("->")
+        op, *matches = head.split()
+        match = [(int(i), int(v, 16)) for i, v in (m.split("=") for m in matches)]
+        rules.append((op, match, [bytes.fromhex(t.replace("_", "")) for t in tail.split()]))
+    return scripts
 
 
 class Recorder:
     """Python twin of the C++ recording interface used to build the golden file."""
 
-    def __init__(self, pattern: str):
+    def __init__(self, pattern: str, rules: list | None = None):
         self.pattern = pattern
+        self.rules = rules
+        self.queue: list[bytes] = []
         self.ops: list[dict] = []
         self.dropped = 0
         self.last = b""
         self.idle_inputs = 0
+
+    def _react(self, op: str, data: bytes) -> None:
+        if self.rules is None:
+            return
+        for rop, match, replies in self.rules:
+            if rop == op and all(i < len(data) and data[i] == v for i, v in match):
+                self.queue = list(replies)
+                return
+
+    def _pop(self, n: int) -> bytes:
+        return self.queue.pop(0)[:n].ljust(n, b"\0")
 
     def _push(self, op: dict) -> None:
         if len(self.ops) < MAX_OPS:
@@ -52,6 +89,7 @@ class Recorder:
         self.idle_inputs = 0
         self._push({"op": op, "data": data.hex()})
         self.last = bytes(data)
+        self._react(op, self.last)
 
     def _fill(self, n: int) -> bytearray:
         out = bytearray(n)
@@ -80,16 +118,25 @@ class Recorder:
         self._push({"op": "read", "len": length, "timeout": timeout_ms})
         if 0 <= timeout_ms <= 10:
             raise DriverError(ErrorCode.TIMEOUT, "empty")
+        if self.rules is not None:
+            if not self.queue:
+                raise DriverError(ErrorCode.TIMEOUT, "no scripted reply")
+            return self._pop(length)
         return bytes(self._fill(length))
 
     def get_feature(self, report_id: int, length: int) -> bytes:
         self._push({"op": "feature_get", "len": length, "id": report_id})
+        if self.rules is not None and self.queue:
+            return self._pop(length)
         buf = self._fill(length)
         if length:
             buf[0] = report_id
         return bytes(buf)
 
     def get_input(self, report_id: int, length: int) -> bytes:
+        if self.rules is not None and self.queue:
+            self._push({"op": "input_get", "len": length, "id": report_id})
+            return self._pop(length)
         self.idle_inputs += 1
         if self.idle_inputs > 3:
             return b""
@@ -144,6 +191,7 @@ class GoldenDrivers(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.golden = _load()
+        cls.scripts = load_scripts()
         set_sleeper(lambda _s: None)  # the C++ reference ran without its pauses too
         ticks = iter(range(10**9))
         set_clock(lambda: next(ticks) / 1000.0)  # 1 ms per reading: polling loops end quickly
@@ -172,12 +220,14 @@ class GoldenDrivers(unittest.TestCase):
         caps = {c["cap"]: (c["usagepage"], c["usageid"], c["interface"]) for c in dev["caps"]}
         mine = {c.value: (d.usage_page, d.usage, d.interface) for c, d in cls.CAPS.items()}
         self.assertEqual(mine, caps)
-        if dev["eq"]:
+        if cls.EQ_FROM_DEVICE:
+            self.assertIsNone(cls.EQ)
+        elif dev["eq"]:
             e = cls.EQ
             self.assertEqual((e.bands, e.baseline, e.min, e.max), (dev["eq"]["bands"], dev["eq"]["baseline"],
                                                                    dev["eq"]["min"], dev["eq"]["max"]))
             self.assertAlmostEqual(e.step, dev["eq"]["step"], places=5)
-        if dev["peq"]:
+        if dev["peq"] and not cls.EQ_FROM_DEVICE:
             p = cls.PEQ
             self.assertEqual((p.bands, p.freq_min, p.freq_max, p.filter_types),
                              (dev["peq"]["bands"], dev["peq"]["freq_min"], dev["peq"]["freq_max"],
@@ -190,10 +240,12 @@ class GoldenDrivers(unittest.TestCase):
         groups: OrderedDict[tuple, dict] = OrderedDict()
         for call in dev["calls"]:
             groups.setdefault((call["call"], json.dumps(call["arg"])), {})[call["pattern"]] = call
+        patterns = [(p, None) for p in PATTERNS]
+        patterns += [(f"script:{v}", rules) for v, rules in self.scripts.get(dev["name"], [])]
         for (name, arg_s), expected in groups.items():
             arg = json.loads(arg_s)
-            for pattern in PATTERNS:  # same order (and so same driver state) as the C++ run
-                rec = Recorder(pattern)
+            for pattern, rules in patterns:  # same order (and so same driver state) as the C++ run
+                rec = Recorder(pattern, rules)
                 try:
                     result = _call(drv, rec, name, arg)
                 except DriverError:

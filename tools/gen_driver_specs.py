@@ -14,6 +14,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 GOLDEN = ROOT / "tests" / "data" / "headsetcontrol_golden.json.gz"
+# Band layout read from the headset at run time; the golden file only has what the script replied.
+EQ_FROM_DEVICE = {"Logitech G PRO X 2 LIGHTSPEED"}
 OUT = ROOT / "openlogi" / "drivers" / "specs.py"
 
 
@@ -37,11 +39,12 @@ def main() -> None:
             for c in d["caps"]
         )
         eq = "None"
-        if d["eq"]:
+        dynamic = d["name"] in EQ_FROM_DEVICE
+        if d["eq"] and not dynamic:
             e = d["eq"]
             eq = f"EqInfo({e['bands']}, {e['baseline']}, {float(e['step'])!r}, {e['min']}, {e['max']})"
         peq = "None"
-        if d["peq"]:
+        if d["peq"] and not dynamic:
             p = d["peq"]
             peq = (f"ParametricEqInfo({p['bands']}, {float(p['gain_base'])!r}, {float(p['gain_step'])!r}, "
                    f"{float(p['gain_min'])!r}, {float(p['gain_max'])!r}, {float(p['q_min'])!r}, "

@@ -287,6 +287,7 @@ class Driver:
     # False when the original derives read timeouts from the wall clock (the golden test
     # then compares bytes but not those clock-derived values)
     TIMING_EXACT: bool = True
+    EQ_FROM_DEVICE: bool = False  # EQ layout is read from the headset (see equalizer_info)
 
     def __init__(self, product_id: int = 0) -> None:
         self.product_id = product_id  # HeadsetControl's getMatchedProductId()

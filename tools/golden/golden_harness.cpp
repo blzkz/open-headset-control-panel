@@ -6,6 +6,9 @@
 #include "devices/hid_interface.hpp"
 
 #include <cstdio>
+#include <cstdlib>
+#include <deque>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -36,6 +39,66 @@ static std::string jstr(std::string_view v)
     return o + "\"";
 }
 
+// Scripted replies (tests/data/golden_scripts.txt): a write matching a rule queues that
+// rule's replies for the following reads; writes that match nothing keep the queue, so a
+// message split over several reports is answered after its last fragment.
+struct Rule {
+    std::string op;
+    std::vector<std::pair<size_t, uint8_t>> match;
+    std::vector<std::vector<uint8_t>> replies;
+};
+struct Script {
+    std::string device, variant;
+    std::vector<Rule> rules;
+};
+static std::vector<Script> SCRIPTS;
+
+static std::string trim(const std::string& s)
+{
+    auto b = s.find_first_not_of(" \t\r");
+    if (b == std::string::npos) return "";
+    return s.substr(b, s.find_last_not_of(" \t\r") - b + 1);
+}
+
+static std::vector<uint8_t> unhex(const std::string& tok)
+{
+    std::string h;
+    for (char c : tok)
+        if (c != '_') h += c;
+    std::vector<uint8_t> out;
+    for (size_t i = 0; i + 1 < h.size(); i += 2) out.push_back(static_cast<uint8_t>(std::stoul(h.substr(i, 2), nullptr, 16)));
+    return out;
+}
+
+static void loadScripts(const char* path)
+{
+    std::ifstream f(path);
+    std::string line;
+    while (std::getline(f, line)) {
+        line = trim(line.substr(0, line.find('#')));
+        if (line.empty()) continue;
+        if (line[0] == '[') {
+            auto close = line.find(']');
+            SCRIPTS.push_back({ line.substr(1, close - 1), trim(line.substr(close + 1)), {} });
+            continue;
+        }
+        std::istringstream ls(line);
+        Rule r;
+        ls >> r.op;
+        std::string tok;
+        bool replies = false;
+        while (ls >> tok) {
+            if (tok == "->") replies = true;
+            else if (replies) r.replies.push_back(unhex(tok));
+            else {
+                auto eq = tok.find('=');
+                r.match.push_back({ std::stoul(tok.substr(0, eq)), static_cast<uint8_t>(std::stoul(tok.substr(eq + 1), nullptr, 16)) });
+            }
+        }
+        SCRIPTS.back().rules.push_back(std::move(r));
+    }
+}
+
 static constexpr size_t MAX_OPS = 48;  // drivers that poll in loops would otherwise log millions
 
 struct Recorder : HIDInterface {
@@ -49,6 +112,30 @@ struct Recorder : HIDInterface {
     std::string pattern = "zeros";
     std::vector<uint8_t> last;
     int idle_inputs = 0;  // input-report polls since the last write
+    const Script* script = nullptr;
+    std::deque<std::vector<uint8_t>> queue;
+
+    void react(const std::string& op, std::span<const uint8_t> d)
+    {
+        if (!script) return;
+        for (const auto& r : script->rules) {
+            if (r.op != op) continue;
+            bool ok = true;
+            for (auto [i, v] : r.match) ok = ok && i < d.size() && d[i] == v;
+            if (ok) {
+                queue.assign(r.replies.begin(), r.replies.end());
+                return;
+            }
+        }
+    }
+    bool pop(std::span<uint8_t> out)
+    {
+        if (queue.empty()) return false;
+        std::fill(out.begin(), out.end(), 0);
+        std::copy_n(queue.front().begin(), std::min(queue.front().size(), out.size()), out.begin());
+        queue.pop_front();
+        return true;
+    }
 
     void fill(std::span<uint8_t> out)
     {
@@ -65,6 +152,7 @@ struct Recorder : HIDInterface {
         idle_inputs = 0;
         push(std::string("{\"op\":\"") + op + "\",\"data\":\"" + hex(d) + "\"}");
         last.assign(d.begin(), d.end());
+        react(op, d);
     }
     auto write(hid_device*, std::span<const uint8_t> d) -> Result<void> override
     {
@@ -83,6 +171,10 @@ struct Recorder : HIDInterface {
         push("{\"op\":\"read\",\"len\":" + std::to_string(d.size()) + ",\"timeout\":" + std::to_string(ms) + "}");
         // a short "flush" read on a real device returns a timeout once the queue is empty
         if (ms >= 0 && ms <= 10) return DeviceError::timeout("empty");
+        if (script) {
+            if (!pop(d)) return DeviceError::timeout("no scripted reply");
+            return d.size();
+        }
         fill(d);
         return d.size();
     }
@@ -102,12 +194,18 @@ struct Recorder : HIDInterface {
     {
         push("{\"op\":\"feature_get\",\"len\":" + std::to_string(d.size()) + ",\"id\":" + std::to_string(d.empty() ? 0 : d[0]) + "}");
         uint8_t id = d.empty() ? 0 : d[0];
+        if (script && pop(d)) return d.size();
         fill(d);
         if (!d.empty()) d[0] = id;
         return d.size();
     }
     auto getInputReport(hid_device*, std::span<uint8_t> d) -> Result<size_t> override
     {
+        if (script && !queue.empty()) {
+            push("{\"op\":\"input_get\",\"len\":" + std::to_string(d.size()) + ",\"id\":" + std::to_string(d.empty() ? 0 : d[0]) + "}");
+            pop(d);
+            return d.size();
+        }
         // a polled dongle returns empty reports until the headset answers
         if (++idle_inputs > 3) return size_t(0);
         push("{\"op\":\"input_get\",\"len\":" + std::to_string(d.size()) + ",\"id\":" + std::to_string(d.empty() ? 0 : d[0]) + "}");
@@ -138,8 +236,9 @@ static std::string run(const std::string& name, const std::string& arg, const st
 
 static const char* PATTERNS[] = { "zeros", "ramp", "ff", "echo" };
 
-int main()
+int main(int argc, char** argv)
 {
+    if (const char* path = argc > 1 ? argv[1] : std::getenv("GOLDEN_SCRIPTS")) loadScripts(path);
     g_golden_hid = &R;
     auto& reg = DeviceRegistry::instance();
     reg.initialize();
@@ -150,14 +249,20 @@ int main()
         std::vector<std::string> calls;
         int caps = d->getCapabilities();
         auto has = [&](capabilities c) { return (caps & (1 << c)) != 0; };
+        std::vector<std::pair<std::string, const Script*>> patterns;
+        for (auto p : PATTERNS) patterns.push_back({ p, nullptr });
+        for (const auto& sc : SCRIPTS)
+            if (sc.device == d->getDeviceName()) patterns.push_back({ "script:" + sc.variant, &sc });
         auto each = [&](const std::string& name, const std::string& arg, auto&& fn) {
             std::string prev_ops, prev_res;
-            for (auto p : PATTERNS) {
+            for (const auto& [p, sc] : patterns) {
                 R.ops.clear();
                 R.dropped = 0;
                 R.last.clear();
                 R.idle_inputs = 0;
                 R.pattern = p;
+                R.script = sc;
+                R.queue.clear();
                 std::string res = fn();
                 std::string ops_key;
                 for (auto& op : R.ops) ops_key += op;
@@ -221,21 +326,32 @@ int main()
         if (auto pi = d->getParametricEqualizerInfo()) {
             peqinfo = "{\"bands\":" + std::to_string(pi->bands_count) + ",\"gain_base\":" + std::to_string(pi->gain_base) + ",\"gain_step\":" + std::to_string(pi->gain_step) + ",\"gain_min\":" + std::to_string(pi->gain_min) + ",\"gain_max\":" + std::to_string(pi->gain_max) + ",\"q_min\":" + std::to_string(pi->q_factor_min) + ",\"q_max\":" + std::to_string(pi->q_factor_max) + ",\"freq_min\":" + std::to_string(pi->freq_min) + ",\"freq_max\":" + std::to_string(pi->freq_max) + ",\"filter_types\":" + std::to_string(pi->filter_types) + "}";
             if (has(CAP_PARAMETRIC_EQUALIZER)) {
-                std::vector<ParametricEqualizerBand> bands;
-                for (int i = 0; i < pi->bands_count; i++) {
-                    ParametricEqualizerBand bd;
-                    bd.frequency = float(pi->freq_min) * float(i + 1) * 3.0f;
-                    if (bd.frequency > pi->freq_max) bd.frequency = float(pi->freq_max);
-                    bd.gain = i % 2 ? pi->gain_max : pi->gain_min + pi->gain_step;
-                    bd.q_factor = pi->q_factor_min + (pi->q_factor_max - pi->q_factor_min) / 4.0f;
-                    bd.type = EqualizerFilterType::Peaking;
-                    bands.push_back(bd);
+                // all peaking, then (when supported) shelving filters on the outer bands
+                auto shelf = [&](int i) {
+                    if (i == 0 && (pi->filter_types & B(int(EqualizerFilterType::LowShelf)))) return EqualizerFilterType::LowShelf;
+                    if (i == pi->bands_count - 1 && (pi->filter_types & B(int(EqualizerFilterType::HighShelf)))) return EqualizerFilterType::HighShelf;
+                    return EqualizerFilterType::Peaking;
+                };
+                for (int variant = 0; variant < 2; variant++) {
+                    std::vector<ParametricEqualizerBand> bands;
+                    bool differs = false;
+                    for (int i = 0; i < pi->bands_count; i++) {
+                        ParametricEqualizerBand bd;
+                        bd.frequency = float(pi->freq_min) * float(i + 1) * 3.0f;
+                        if (bd.frequency > pi->freq_max) bd.frequency = float(pi->freq_max);
+                        bd.gain = i % 2 ? pi->gain_max : pi->gain_min + pi->gain_step;
+                        bd.q_factor = pi->q_factor_min + (pi->q_factor_max - pi->q_factor_min) / 4.0f;
+                        bd.type = variant ? shelf(i) : EqualizerFilterType::Peaking;
+                        differs = differs || bd.type != EqualizerFilterType::Peaking;
+                        bands.push_back(bd);
+                    }
+                    if (variant && !differs) break;
+                    std::string arg = "[";
+                    for (size_t i = 0; i < bands.size(); i++)
+                        arg += std::string(i ? "," : "") + "[" + std::to_string(bands[i].frequency) + "," + std::to_string(bands[i].gain) + "," + std::to_string(bands[i].q_factor) + "," + std::to_string(int(bands[i].type)) + "]";
+                    arg += "]";
+                    each("parametric_eq", arg, [&] { return result(d->setParametricEqualizer(nullptr, ParametricEqualizerSettings(bands)), [](auto&) { return std::string("{}"); }); });
                 }
-                std::string arg = "[";
-                for (size_t i = 0; i < bands.size(); i++)
-                    arg += std::string(i ? "," : "") + "[" + std::to_string(bands[i].frequency) + "," + std::to_string(bands[i].gain) + "," + std::to_string(bands[i].q_factor) + ",2]";
-                arg += "]";
-                each("parametric_eq", arg, [&] { return result(d->setParametricEqualizer(nullptr, ParametricEqualizerSettings(bands)), [](auto&) { return std::string("{}"); }); });
             }
         }
         if (has(CAP_MICROPHONE_MUTE_LED_BRIGHTNESS))

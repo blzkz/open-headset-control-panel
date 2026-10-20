@@ -13,6 +13,7 @@ from .base import (
     BatteryStatus,
     Driver,
     DriverError,
+    EqInfo,
     ErrorCode,
     FilterType,
     Handle,
@@ -121,7 +122,7 @@ class _Centurion(Driver):
         size = len(sub)
         if size > 0x0FFF:
             raise invalid("Centurion bridge message exceeds the 12-bit size limit")
-        prefix = bytes((BRIDGE_FN | SOFTWARE_ID, (size >> 8) & 0x0F, size & 0xFF))
+        prefix = bytes((bridge, BRIDGE_FN | SOFTWARE_ID, (size >> 8) & 0x0F, size & 0xFF))
         if size <= MAX_SINGLE_BRIDGE_PAYLOAD:
             h.write(self._frame(prefix + sub), FRAME_SIZE)
         else:
@@ -429,7 +430,13 @@ def onboard_eq_payload(slot: int, bands) -> bytes:
 @driver("Logitech G PRO X 2 LIGHTSPEED")
 class LogitechGProX2Lightspeed(_Centurion):
     EXACT_DIRECT_LENGTH = DETECT_CONNECTION_EVENTS = PROBE_OFFLINE_ON_TIMEOUT = LOOKUP_FEATURES_BY_ID = True
+    EQ_FROM_DEVICE = True
     SIDETONE_MAX = 100
+
+    def equalizer_info(self, h: Handle) -> EqInfo:
+        """Playback EQ layout as the headset reports it (band count and gain range)."""
+        desc = self._descriptor(h)
+        return EqInfo(len(desc["bands"]), 0, 1.0, int(desc["min"]), int(desc["max"]))
 
     def battery(self, h: Handle) -> Battery:
         try:
