@@ -78,8 +78,8 @@ class Controller(QObject):
             self.bridge.service.set_desired_state(None, None)
 
     def _apply_effects(self) -> None:
-        self.audio.apply_voice(self.profile.voice, "OpenLogi · " + tr("Voice enhancement"))
-        self.audio.apply_surround(self.profile.surround, "OpenLogi · " + tr("Virtual 7.1 surround"))
+        self.audio.apply_voice(self.profile.voice, "Open Headset · " + tr("Voice enhancement"))
+        self.audio.apply_surround(self.profile.surround, "Open Headset · " + tr("Virtual 7.1 surround"))
 
     # -- device feedback ------------------------------------------------------------------
     def _device_info(self, snap) -> None:
@@ -204,7 +204,7 @@ class Controller(QObject):
         for k, val in changes.items():
             setattr(v, k, val)
         v.preset = voice_matches_preset(v)
-        self.audio.apply_voice(v, "OpenLogi · " + tr("Voice enhancement"))
+        self.audio.apply_voice(v, "Open Headset · " + tr("Voice enhancement"))
         self.voiceChanged.emit()
         self.schedule_save()
 
@@ -212,7 +212,7 @@ class Controller(QObject):
         s = self.profile.surround
         for k, val in changes.items():
             setattr(s, k, val)
-        self.audio.apply_surround(s, "OpenLogi · " + tr("Virtual 7.1 surround"))
+        self.audio.apply_surround(s, "Open Headset · " + tr("Virtual 7.1 surround"))
         self.surroundChanged.emit()
         self.schedule_save()
 

@@ -20,8 +20,8 @@ from .filterchain import (
     set_controls,
 )
 
-VOICE_NODE = "openlogi_voice"
-NS_NODE = "openlogi_voice_ns"
+VOICE_NODE = "openheadset_voice"
+NS_NODE = "openheadset_voice_ns"
 
 VOICE_PRESETS: dict[str, dict[str, float | bool | int]] = {
     "broadcast": dict(highpass_enabled=True, highpass_hz=90, gate_enabled=True, gate_threshold_db=-50,

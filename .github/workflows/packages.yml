@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Stamp version
-        run: sed -i 's/^__version__ = .*/__version__ = "${{ inputs.version }}"/' openlogi/__init__.py
+        run: sed -i 's/^__version__ = .*/__version__ = "${{ inputs.version }}"/' openheadset/__init__.py
       - name: Install nfpm
         run: |
           curl -sfL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
@@ -87,11 +87,11 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          openlogi-headset --version
-          openlogi-headsetctl --list-presets
-          openlogi-headset --selftest
-          test -f /usr/lib/udev/rules.d/70-openlogi-headset.rules
-          test -f /usr/share/applications/openlogi-headset.desktop
+          open-headset --version
+          open-headsetctl --list-presets
+          open-headset --selftest
+          test -f /usr/lib/udev/rules.d/70-open-headset.rules
+          test -f /usr/share/applications/open-headset.desktop
 
   appimage-test:
     name: AppImage on Ubuntu 22.04

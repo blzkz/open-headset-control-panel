@@ -1,4 +1,4 @@
-// Interactive EQ curve on <canvas> (port of openlogi/ui/widgets/eqgraph.py).
+// Interactive EQ curve on <canvas> (port of openheadset/ui/widgets/eqgraph.py).
 
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const M = { l: 52, r: 28, t: 28, b: 40 };

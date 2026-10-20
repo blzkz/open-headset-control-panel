@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Open Headset Control Panel
+GenericName=Headset Control Panel
+GenericName[es]=Panel de control de auriculares
+Comment=Configure gaming headsets (Logitech, SteelSeries, HyperX, Corsair, Audeze…): equalizer, sidetone, battery, voice and surround
+Comment[es]=Configura auriculares gaming (Logitech, SteelSeries, HyperX, Corsair, Audeze…): ecualizador, sidetone, batería, voz y envolvente
+Exec=open-headset
+Icon=open-headset
+Terminal=false
+Categories=AudioVideo;Audio;Settings;HardwareSettings;
+Keywords=headset;equalizer;sidetone;battery;g hub;logitech;steelseries;hyperx;corsair;audeze;arctis;headsetcontrol;
+StartupWMClass=open-headset

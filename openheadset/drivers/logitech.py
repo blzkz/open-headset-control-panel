@@ -1,7 +1,7 @@
 """Logitech headsets handled by fixed HID++ commands (ported from HeadsetControl).
 
 The app talks to most Logitech wireless headsets through runtime HID++ feature
-discovery (openlogi.hidpp); these ports keep exact parity with HeadsetControl for
+discovery (openheadset.hidpp); these ports keep exact parity with HeadsetControl for
 models and protocols the discovery path does not cover.
 """
 

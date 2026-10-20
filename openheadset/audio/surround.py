@@ -12,7 +12,7 @@ from pathlib import Path
 from ..config import SurroundSettings
 from .filterchain import FilterProcess, build_conf, module_block
 
-SURROUND_NODE = "openlogi_surround"
+SURROUND_NODE = "openheadset_surround"
 
 # ITU-R BS.775 layout; azimuth counter-clockwise from front, as the SOFA plugin expects.
 CHANNELS: tuple[tuple[str, float, float], ...] = (

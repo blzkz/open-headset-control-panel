@@ -9,11 +9,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from openlogi import service as service_mod
-from openlogi.device import Headset
-from openlogi.hidpp import HidrawInfo
-from openlogi.hidpp.protocol import Hidpp20Device
-from openlogi.service import HeadsetService, LinkState, ServiceListener
+from openheadset import service as service_mod
+from openheadset.device import Headset
+from openheadset.hidpp import HidrawInfo
+from openheadset.hidpp.protocol import Hidpp20Device
+from openheadset.service import HeadsetService, LinkState, ServiceListener
 
 from test_hidpp import FakeHeadset
 

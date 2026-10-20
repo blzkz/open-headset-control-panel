@@ -32,7 +32,7 @@ def _on_off(text: str) -> bool:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="openlogi-headsetctl",
+        prog="open-headsetctl",
         description="Control gaming headsets: Logitech HID++ 2.0 (PRO X Wireless, G733, G935, …) and the "
                     "models supported by HeadsetControl (SteelSeries, HyperX, Corsair, Audeze, …)",
     )
@@ -270,7 +270,7 @@ def diagnose() -> int:
     """Read-only dump for bug reports: hidraw nodes, HID++ features, getter replies."""
     from . import __version__
 
-    report: dict[str, object] = {"openlogi": __version__, "nodes": [], "devices": []}
+    report: dict[str, object] = {"openheadset": __version__, "nodes": [], "devices": []}
     for info in enumerate_hidraw(LOGITECH_VID):
         report["nodes"].append({  # type: ignore[union-attr]
             "path": info.path, "usb_id": info.usb_id, "name": info.name, "phys": info.phys,

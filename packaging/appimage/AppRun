@@ -1,12 +1,12 @@
 #!/bin/sh
-# OpenLogi Headset AppImage entry point: bundled CPython + PyQt6, host PipeWire tools.
+# Open Headset Control Panel AppImage entry point: bundled CPython + PyQt6, host PipeWire tools.
 HERE="$(dirname "$(readlink -f "$0")")"
 PY="$(ls -d "$HERE"/opt/python3.*/bin/python3.* 2>/dev/null | grep -E 'python3\.[0-9]+$' | head -n1)"
 export PYTHONNOUSERSITE=1
 export PYTHONDONTWRITEBYTECODE=1
 unset PYTHONHOME PYTHONPATH
-# CLI: `OpenLogi_Headset.AppImage ctl -b` (or symlink the AppImage as openlogi-headsetctl)
+# CLI: `Open_Headset_Control_Panel.AppImage ctl -b` (or symlink the AppImage as open-headsetctl)
 case "$(basename "${ARGV0:-$0}")" in
-    openlogi-headsetctl*) set -- ctl "$@" ;;
+    open-headsetctl*) set -- ctl "$@" ;;
 esac
-exec "$PY" -s -m openlogi "$@"
+exec "$PY" -s -m openheadset "$@"

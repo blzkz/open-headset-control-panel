@@ -7,11 +7,11 @@ on:
     paths:
       - "web/**"
       - "tools/build_web.py"
-      - "openlogi/__init__.py"
-      - "openlogi/models.py"
-      - "openlogi/presets.py"
-      - "openlogi/assets/**"
-      - "packaging/70-openlogi-headset.rules"
+      - "openheadset/__init__.py"
+      - "openheadset/models.py"
+      - "openheadset/presets.py"
+      - "openheadset/assets/**"
+      - "packaging/70-open-headset.rules"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OpenLogi HUB · Web</title>
+  <title>Open Headset Control Panel · Web</title>
   <meta name="description" content="Control Logitech PRO X Wireless, G733, G935, G535 and other HID++ headsets from the browser with WebHID: equalizer, sidetone, lighting, auto power-off and battery.">
   <meta name="theme-color" content="#0a0a0b">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -17,7 +17,7 @@
     <button class="icon-btn back" id="backBtn" hidden aria-label="Back">
       <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
-    <div class="brand"><b>OPENLOGI</b><span>HUB</span><em>WEB</em></div>
+    <div class="brand"><b>OPEN HEADSET</b><span>CONTROL PANEL</span><em>WEB</em></div>
     <button class="profile-btn" id="profileBtn" hidden>
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       <span class="cap" data-i18n="Profile">Profile</span>
@@ -25,7 +25,7 @@
       <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
     </button>
     <div class="actions">
-      <a class="ghost small" id="desktopLink" href="https://github.com/blzkz/openLogiHeadsetControlPanel/releases/latest" target="_blank" rel="noopener" data-i18n="Desktop app">Desktop app</a>
+      <a class="ghost small" id="desktopLink" href="https://github.com/blzkz/open-headset-control-panel/releases/latest" target="_blank" rel="noopener" data-i18n="Desktop app">Desktop app</a>
       <button class="primary small" id="connectBtn" data-i18n="Connect headset">Connect headset</button>
       <button class="ghost small" id="disconnectBtn" hidden data-i18n="Disconnect">Disconnect</button>
     </div>
@@ -43,8 +43,8 @@
       <p class="banner" id="noHid" hidden data-i18n="Your browser does not support WebHID. Use Chrome, Edge, Brave or Opera on desktop.">…</p>
       <p class="faint" id="linuxNote" hidden>
         <span data-i18n="On Linux the browser needs permission to open the headset:">…</span>
-        <a href="70-openlogi-headset.rules" download data-i18n="download the udev rule">download the udev rule</a>
-        <code>sudo install -m644 70-openlogi-headset.rules /etc/udev/rules.d/ &amp;&amp; sudo udevadm control --reload &amp;&amp; sudo udevadm trigger</code>
+        <a href="70-open-headset.rules" download data-i18n="download the udev rule">download the udev rule</a>
+        <code>sudo install -m644 70-open-headset.rules /etc/udev/rules.d/ &amp;&amp; sudo udevadm control --reload &amp;&amp; sudo udevadm trigger</code>
       </p>
       <h3 class="h3" data-i18n="Supported headsets">Supported headsets</h3>
       <div class="models" id="modelList"></div>

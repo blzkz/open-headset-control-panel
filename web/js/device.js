@@ -1,4 +1,4 @@
-// High-level headset: capability discovery + typed feature access (port of openlogi/device.py).
+// High-level headset: capability discovery + typed feature access (port of openheadset/device.py).
 import { Feature, FeatureNotSupported, Hidpp20, HidppError, featureName } from "./hidpp.js";
 
 const bcd = (b) => (b >> 4) * 10 + (b & 0x0f);
@@ -160,7 +160,7 @@ export class Headset {
 
 export { FeatureNotSupported, HidppError };
 
-// -- battery estimation (port of openlogi/battery.py) -----------------------------------------
+// -- battery estimation (port of openheadset/battery.py) -----------------------------------------
 const CHARGING_OFFSET_MV = 170;
 const CHARGE_HOURS = 3;
 const FULL_HOURS = 20;

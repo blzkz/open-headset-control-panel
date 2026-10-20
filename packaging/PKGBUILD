@@ -1,22 +1,25 @@
 # Maintainer: blzkz <blzkz@users.noreply.github.com>
 # AUR-ready PKGBUILD building from the tagged GitHub release.
-pkgname=openlogi-headset
+pkgname=open-headset
 pkgver=1.2.0
 pkgrel=1
-pkgdesc="G HUB-style control panel for Logitech PRO X Wireless headsets (equalizer, sidetone, battery, voice, 7.1)"
+pkgdesc="G HUB-style control panel for gaming headsets: Logitech, SteelSeries, HyperX, Corsair, Audeze… (EQ, sidetone, battery, voice, 7.1)"
 arch=('any')
-url="https://github.com/blzkz/openLogiHeadsetControlPanel"
+url="https://github.com/blzkz/open-headset-control-panel"
 license=('GPL-3.0-or-later')
+conflicts=('openlogi-headset')
+replaces=('openlogi-headset')
+provides=('openlogi-headset')
 depends=('python' 'python-pyqt6' 'qt6-svg' 'qt6-multimedia' 'pipewire' 'libpulse')
 optdepends=('libmysofa: HRTF datasets for virtual 7.1 surround'
             'pipewire-pulse: volume control through pactl')
-install=openlogi-headset.install
+install=open-headset.install
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 package() {
-    cd "openLogiHeadsetControlPanel-$pkgver"
+    cd "open-headset-control-panel-$pkgver"
     ./packaging/stage.sh "$pkgver"
     cp -a build/stage/. "$pkgdir/"
-    python -m compileall -q -d /usr/share/openlogi-headset "$pkgdir/usr/share/openlogi-headset"
+    python -m compileall -q -d /usr/share/open-headset "$pkgdir/usr/share/open-headset"
 }

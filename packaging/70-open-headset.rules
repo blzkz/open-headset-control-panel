@@ -1,5 +1,5 @@
-# OpenLogi Headset: let the logged-in user configure supported headsets over hidraw.
-# Generated from openlogi/models.py and openlogi/drivers (python3 -m openlogi.permissions).
+# Open Headset Control Panel: let the logged-in user configure supported headsets over hidraw.
+# Generated from openheadset/models.py and openheadset/drivers (python3 -m openheadset.permissions).
 # HyperX (HP)
 KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="03f0", ATTRS{idProduct}=="018b|03cc|0696|089d|098d", TAG+="uaccess"
 # Logitech

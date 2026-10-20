@@ -2,7 +2,7 @@
 
     python3 tools/build_web.py [OUT_DIR]      (default: build/web)
 
-Model data comes from ``openlogi/models.py`` so the desktop app and the web
+Model data comes from ``openheadset/models.py`` so the desktop app and the web
 share one registry; product images are converted to WebP when Pillow exists.
 """
 
@@ -16,9 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from openlogi import __version__  # noqa: E402
-from openlogi.models import ALL_PIDS, MODELS  # noqa: E402
-from openlogi.presets import BUILTIN_PRESETS  # noqa: E402
+from openheadset import __version__  # noqa: E402
+from openheadset.models import ALL_PIDS, MODELS  # noqa: E402
+from openheadset.presets import BUILTIN_PRESETS  # noqa: E402
 
 try:
     from PIL import Image
@@ -36,7 +36,7 @@ def build(out: Path) -> None:
     used = {m.image for m in MODELS} | {"headset-side.png"}
     image_map: dict[str, str] = {}
     for name in sorted(used):
-        src = ROOT / "openlogi" / "assets" / "images" / name
+        src = ROOT / "openheadset" / "assets" / "images" / name
         if Image is not None:
             dst = images / (Path(name).stem + ".webp")
             with Image.open(src) as im:
@@ -45,8 +45,8 @@ def build(out: Path) -> None:
             dst = images / name
             shutil.copyfile(src, dst)
         image_map[name] = f"assets/images/{dst.name}"
-    shutil.copyfile(ROOT / "openlogi" / "assets" / "icons" / "openlogi-headset.svg", out / "assets" / "icon.svg")
-    shutil.copyfile(ROOT / "packaging" / "70-openlogi-headset.rules", out / "70-openlogi-headset.rules")
+    shutil.copyfile(ROOT / "openheadset" / "assets" / "icons" / "open-headset.svg", out / "assets" / "icon.svg")
+    shutil.copyfile(ROOT / "packaging" / "70-open-headset.rules", out / "70-open-headset.rules")
 
     data = {
         "version": __version__,

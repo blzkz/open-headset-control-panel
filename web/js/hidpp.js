@@ -1,4 +1,4 @@
-// HID++ 2.0 over WebHID. Mirrors openlogi/hidpp/protocol.py: feature indexes are
+// HID++ 2.0 over WebHID. Mirrors openheadset/hidpp/protocol.py: feature indexes are
 // resolved at runtime through IRoot, never hard-coded.
 
 export const REPORT_LONG = 0x11;

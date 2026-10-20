@@ -63,8 +63,8 @@ def _refresh_kde_app_cache() -> None:
 def run(minimized: bool = False, page: str | None = None) -> int:
     QGuiApplication.setDesktopFileName(APP_ID)
     app = QApplication(sys.argv)
-    app.setApplicationName("OpenLogi Headset")
-    app.setOrganizationName("openlogi")
+    app.setApplicationName("Open Headset Control Panel")
+    app.setOrganizationName("openheadset")
     app.setQuitOnLastWindowClosed(False)
 
     if _already_running():
@@ -73,9 +73,12 @@ def run(minimized: bool = False, page: str | None = None) -> int:
 
     _refresh_kde_app_cache()
     config = Config.load()
+    from .pages.settings import migrate_autostart
+
+    migrate_autostart()
     i18n.set_language(config.app.language)
     apply_theme(app)
-    app.setWindowIcon(QIcon(str(ASSETS / "icons" / "openlogi-headset.svg")))
+    app.setWindowIcon(QIcon(str(ASSETS / "icons" / "open-headset.svg")))
 
     # imported late so i18n is configured before widgets build their strings
     from .controller import Controller

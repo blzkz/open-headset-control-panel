@@ -26,11 +26,11 @@ from pathlib import Path
 from . import __version__
 from .battery import CACHE_DIR
 
-REPO = "blzkz/openLogiHeadsetControlPanel"
+REPO = "blzkz/open-headset-control-panel"
 API_HOST = "api.github.com"
-PACKAGE = "openlogi-headset"
-PACKAGE_ROOT = Path("/usr/share/openlogi-headset")
-USER_AGENT = f"openlogi-headset/{__version__}"
+PACKAGE = "open-headset"
+PACKAGE_ROOT = Path("/usr/share/open-headset")
+USER_AGENT = f"open-headset/{__version__}"
 
 
 class UpdateError(Exception):
@@ -83,7 +83,7 @@ def detect_install() -> InstallKind:
     here = Path(__file__).resolve()
     if PACKAGE_ROOT not in here.parents:
         return InstallKind.SOURCE
-    probe = str(PACKAGE_ROOT / "openlogi" / "__init__.py")
+    probe = str(PACKAGE_ROOT / "openheadset" / "__init__.py")
     if shutil.which("pacman") and _owned_by(["pacman", "-Qqo", probe]):
         return InstallKind.PACMAN
     if shutil.which("dpkg") and _owned_by(["dpkg", "-S", probe]):
@@ -96,7 +96,7 @@ def detect_install() -> InstallKind:
 # -- GitHub ----------------------------------------------------------------------------------
 def github_token() -> str | None:
     """A token is only needed while the repository is private (uses the user's gh login)."""
-    for var in ("OPENLOGI_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"):
+    for var in ("OPENHEADSET_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"):
         if os.environ.get(var):
             return os.environ[var]
     if shutil.which("gh"):
@@ -212,7 +212,8 @@ def download_verified(release: Release, kind: InstallKind, token: str | None = N
 def install_command(kind: InstallKind, package: Path) -> list[str]:
     path = str(package.resolve())
     if kind is InstallKind.PACMAN:
-        return ["pkexec", "pacman", "-U", "--noconfirm", path]
+        # --ask=4: answer "yes" to removing a conflicting package (the old openlogi-headset)
+        return ["pkexec", "pacman", "-U", "--noconfirm", "--ask=4", path]
     if kind is InstallKind.DEB:
         if shutil.which("apt-get"):
             return ["pkexec", "apt-get", "install", "-y", "--allow-downgrades", path]
@@ -251,5 +252,5 @@ def install(kind: InstallKind, package: Path) -> None:
 def relaunch_command(kind: InstallKind) -> list[str]:
     if kind is InstallKind.APPIMAGE:
         return [os.environ["APPIMAGE"]]
-    launcher = shutil.which("openlogi-headset")
+    launcher = shutil.which("open-headset")
     return [launcher] if launcher else []

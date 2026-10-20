@@ -1,9 +1,11 @@
-# OpenLogi Headset
+# Open Headset Control Panel
 
 Panel de control para **auriculares gaming en Linux**, con un aspecto muy cercano a **Logitech G HUB**: auriculares **Logitech HID++** (PRO X Wireless, G733, G935, G535…) y **más de 40 modelos de SteelSeries, HyperX, Corsair, Audeze, Logitech/ASTRO, Sony, Jabra, ROCCAT, Lenovo, Plantronics y MCHOSE** gracias a una adaptación de los controladores de [HeadsetControl](https://github.com/Sapd/HeadsetControl).
 Habla directamente con el auricular a través de `/dev/hidraw` (sin hidapi, sin código compilado) y se integra con PipeWire para las funciones de audio que en Windows hace G HUB por software.
 
-**🌐 Versión web (sin instalar nada): <https://blzkz.github.io/openLogiHeadsetControlPanel/>**. Funciona con WebHID en Chrome, Edge, Brave u Opera, en Linux, Windows y macOS.
+> Antes se llamaba **OpenLogi Headset** ([repositorio anterior](https://github.com/blzkz/openLogiHeadsetControlPanel), archivado). Al instalar esta versión se sustituye el paquete antiguo y se conservan tus perfiles y ajustes.
+
+**🌐 Versión web (sin instalar nada): <https://blzkz.github.io/open-headset-control-panel/>**. Funciona con WebHID en Chrome, Edge, Brave u Opera, en Linux, Windows y macOS.
 
 ![Inicio](docs/screenshots/home.png)
 
@@ -26,11 +28,11 @@ Habla directamente con el auricular a través de `/dev/hidraw` (sin hidapi, sin 
 | G535 LIGHTSPEED | `0ac4` | 🧪 experimental |
 | G431 / G432 / G433 (USB) | `0a9b`, `0a9c`, `0a6d` | 🧪 experimental |
 
-Las funciones no se suponen por modelo: la app **pregunta a cada auricular qué features HID++ tiene** y solo muestra (y solo escribe en) las que existen. Los modelos experimentales vienen de la ingeniería inversa de la comunidad ([HeadsetControl](https://github.com/Sapd/HeadsetControl), g933-utils) y aún no se han probado con el hardware real. Si tienes uno, `openlogi-headsetctl --diagnose` genera un informe de solo lectura para adjuntarlo en una incidencia.
+Las funciones no se suponen por modelo: la app **pregunta a cada auricular qué features HID++ tiene** y solo muestra (y solo escribe en) las que existen. Los modelos experimentales vienen de la ingeniería inversa de la comunidad ([HeadsetControl](https://github.com/Sapd/HeadsetControl), g933-utils) y aún no se han probado con el hardware real. Si tienes uno, `open-headsetctl --diagnose` genera un informe de solo lectura para adjuntarlo en una incidencia.
 
 ### Otras marcas y modelos (controladores de HeadsetControl)
 
-Estos modelos usan una **adaptación a Python de los controladores de HeadsetControl**, comprobada **byte a byte** contra el código C++ original: se compila HeadsetControl con una interfaz HID que graba cada paquete, y los tests exigen que la versión Python escriba exactamente los mismos bytes y entienda las respuestas igual. En los protocolos con negociación (Logitech Centurion, ASTRO A50, Audeze) también se simulan respuestas de un auricular conectado para recorrer el protocolo completo ([`tools/golden`](tools/golden/README.md)). Aún no se han probado con OpenLogi en hardware real: aparecen como *soporte experimental*. Su página **Auriculares** muestra solo lo que tenga cada modelo.
+Estos modelos usan una **adaptación a Python de los controladores de HeadsetControl**, comprobada **byte a byte** contra el código C++ original: se compila HeadsetControl con una interfaz HID que graba cada paquete, y los tests exigen que la versión Python escriba exactamente los mismos bytes y entienda las respuestas igual. En los protocolos con negociación (Logitech Centurion, ASTRO A50, Audeze) también se simulan respuestas de un auricular conectado para recorrer el protocolo completo ([`tools/golden`](tools/golden/README.md)). Aún no se han probado con esta app en hardware real: aparecen como *soporte experimental*. Su página **Auriculares** muestra solo lo que tenga cada modelo.
 
 <!-- devices:start -->
 | Modelo | Marca | IDs USB | Funciones |
@@ -119,17 +121,17 @@ La misma capa de protocolo portada a JavaScript, alojada en GitHub Pages: ecuali
 
 ## Instalación
 
-Descarga el instalable de tu distro desde la [última release](https://github.com/blzkz/openLogiHeadsetControlPanel/releases/latest). Todos los paquetes nativos instalan la regla udev, así que el auricular funciona sin root nada más instalar.
+Descarga el instalable de tu distro desde la [última release](https://github.com/blzkz/open-headset-control-panel/releases/latest). Todos los paquetes nativos instalan la regla udev, así que el auricular funciona sin root nada más instalar.
 
 | Distro | Archivo | Comando |
 |---|---|---|
-| Debian 13+, Ubuntu 24.04+, Mint, Pop!_OS | `openlogi-headset_X.Y.Z-1_all.deb` | `sudo apt install ./openlogi-headset_*_all.deb` |
-| Fedora | `openlogi-headset-X.Y.Z-1.noarch.rpm` | `sudo dnf install ./openlogi-headset-*.noarch.rpm` |
-| openSUSE Tumbleweed | `openlogi-headset-X.Y.Z-1.noarch.rpm` | `sudo zypper install --allow-unsigned-rpm ./openlogi-headset-*.noarch.rpm` |
-| Arch, Manjaro, CachyOS, EndeavourOS | `openlogi-headset-X.Y.Z-1-any.pkg.tar.zst` | `sudo pacman -U ./openlogi-headset-*-any.pkg.tar.zst` (o [`packaging/PKGBUILD`](packaging/PKGBUILD) con `makepkg -si`) |
-| Cualquier otra | `OpenLogi_Headset-X.Y.Z-x86_64.AppImage` | `chmod +x OpenLogi_Headset-*.AppImage && ./OpenLogi_Headset-*.AppImage` |
+| Debian 13+, Ubuntu 24.04+, Mint, Pop!_OS | `open-headset_X.Y.Z-1_all.deb` | `sudo apt install ./open-headset_*_all.deb` |
+| Fedora | `open-headset-X.Y.Z-1.noarch.rpm` | `sudo dnf install ./open-headset-*.noarch.rpm` |
+| openSUSE Tumbleweed | `open-headset-X.Y.Z-1.noarch.rpm` | `sudo zypper install --allow-unsigned-rpm ./open-headset-*.noarch.rpm` |
+| Arch, Manjaro, CachyOS, EndeavourOS | `open-headset-X.Y.Z-1-any.pkg.tar.zst` | `sudo pacman -U ./open-headset-*-any.pkg.tar.zst` (o [`packaging/PKGBUILD`](packaging/PKGBUILD) con `makepkg -si`) |
+| Cualquier otra | `Open_Headset_Control_Panel-X.Y.Z-x86_64.AppImage` | `chmod +x Open_Headset_Control_Panel-*.AppImage && ./Open_Headset_Control_Panel-*.AppImage` |
 
-El **AppImage** incluye su propio Python y Qt; del sistema solo usa PipeWire (`pipewire`, `pactl`, `pw-cli`). Como no puede instalar la regla udev por sí solo, si no tiene acceso al auricular la pantalla de inicio muestra un botón **Conceder acceso** que la instala con `pkexec`. La CLI del AppImage se usa así: `./OpenLogi_Headset-*.AppImage ctl -b`.
+El **AppImage** incluye su propio Python y Qt; del sistema solo usa PipeWire (`pipewire`, `pactl`, `pw-cli`). Como no puede instalar la regla udev por sí solo, si no tiene acceso al auricular la pantalla de inicio muestra un botón **Conceder acceso** que la instala con `pkexec`. La CLI del AppImage se usa así: `./Open_Headset_Control_Panel-*.AppImage ctl -b`.
 
 Cada release se construye en GitHub Actions, y antes de publicarse se instala de verdad en contenedores limpios de Debian 13, Ubuntu 24.04, Fedora, openSUSE Tumbleweed y Arch, con una prueba de humo sin pantalla (además del AppImage en Ubuntu 22.04). Junto a los paquetes se publican el wheel de Python, el sdist y `SHA256SUMS`.
 
@@ -138,14 +140,14 @@ Cada release se construye en GitHub Actions, y antes de publicarse se instala de
 Requisitos: Python ≥ 3.10, PyQt6 (con QtSvg y QtMultimedia), PipeWire + `pactl` y `libmysofa` para el 7.1.
 
 ```bash
-python3 -m openlogi          # ejecutar sin instalar
+python3 -m openheadset          # ejecutar sin instalar
 ./install.sh                 # instalación por usuario en ~/.local (./install.sh --uninstall)
 ```
 
 Regla udev manual (si no usas un paquete):
 
 ```bash
-sudo install -m644 packaging/70-openlogi-headset.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+sudo install -m644 packaging/70-open-headset.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
 ```
 
 ### Construir los instalables
@@ -160,35 +162,35 @@ Para publicar una versión basta con crear una release `vX.Y.Z` en GitHub. El wo
 ## Uso
 
 ```
-openlogi-headset [--minimized] [--page equalizer|mic|surround|info] [-v]
+open-headset [--minimized] [--page equalizer|mic|surround|info] [-v]
 ```
 
 CLI:
 
 ```bash
-openlogi-headsetctl -i                      # info + estado
-openlogi-headsetctl -b                      # batería: "44% (charging)"
-openlogi-headsetctl -s 30                   # sidetone 30 %
-openlogi-headsetctl -p bass_boost           # preajuste de EQ
-openlogi-headsetctl -e 4,3,2,0,-1,-1,1,2,3,4  # EQ manual (dB)
-openlogi-headsetctl --list-presets
-openlogi-headsetctl -a 30                   # apagado automático a los 30 min (0 = nunca)
-openlogi-headsetctl -l breathing --color ff2d55 --brightness 80   # iluminación (modelos RGB)
-openlogi-headsetctl --list-devices          # modelos compatibles
-openlogi-headsetctl --chatmix               # mezcla juego/chat (modelos con rueda)
-openlogi-headsetctl --voice-prompts off --volume-limiter on   # opciones según el modelo
-openlogi-headsetctl --mic-volume 96 --noise-filter 1
-openlogi-headsetctl --device-preset 2       # preset guardado en el auricular
-openlogi-headsetctl --diagnose > informe.json   # informe de solo lectura para incidencias
-openlogi-headsetctl -i --json
+open-headsetctl -i                      # info + estado
+open-headsetctl -b                      # batería: "44% (charging)"
+open-headsetctl -s 30                   # sidetone 30 %
+open-headsetctl -p bass_boost           # preajuste de EQ
+open-headsetctl -e 4,3,2,0,-1,-1,1,2,3,4  # EQ manual (dB)
+open-headsetctl --list-presets
+open-headsetctl -a 30                   # apagado automático a los 30 min (0 = nunca)
+open-headsetctl -l breathing --color ff2d55 --brightness 80   # iluminación (modelos RGB)
+open-headsetctl --list-devices          # modelos compatibles
+open-headsetctl --chatmix               # mezcla juego/chat (modelos con rueda)
+open-headsetctl --voice-prompts off --volume-limiter on   # opciones según el modelo
+open-headsetctl --mic-volume 96 --noise-filter 1
+open-headsetctl --device-preset 2       # preset guardado en el auricular
+open-headsetctl --diagnose > informe.json   # informe de solo lectura para incidencias
+open-headsetctl -i --json
 ```
 
-(`python3 -m openlogi ctl …` equivale a `openlogi-headsetctl …`). La CLI usa un *software ID* HID++ distinto, así que si la GUI está abierta **refleja al instante** los cambios hechos desde la CLI.
+(`python3 -m openheadset ctl …` equivale a `open-headsetctl …`). La CLI usa un *software ID* HID++ distinto, así que si la GUI está abierta **refleja al instante** los cambios hechos desde la CLI.
 
 ## Arquitectura
 
 ```
-openlogi/
+openheadset/
 ├── hidpp/            Protocolo HID++ 2.0 puro (transporte hidraw, mensajes, errores, features tipadas)
 ├── models.py         Registro de modelos (IDs, imagen, curva de batería, zonas de luz); también alimenta la web
 ├── device.py         Descubrimiento del receptor y modelo de alto nivel del auricular
@@ -197,7 +199,7 @@ openlogi/
 ├── service.py        Hilo de fondo: reconexión, keepalive, eventos, escrituras coalescidas (latest-wins)
 ├── battery.py        Curva de descarga Li-ion + suavizado
 ├── audio/            PipeWire: pactl, cadena de voz, 7.1 virtual (procesos `pipewire -c` aislados)
-├── config.py         Perfiles y ajustes (JSON atómico en ~/.config/openlogi-headset)
+├── config.py         Perfiles y ajustes (JSON atómico en ~/.config/open-headset)
 ├── cli.py            Interfaz de línea de comandos
 └── ui/               PyQt6: tema G HUB, widgets propios (gráfico EQ, mapa 7.1, vúmetro…), páginas, bandeja
 web/                  Versión WebHID (HTML/CSS/JS sin dependencias); tools/build_web.py la empaqueta para Pages
@@ -233,4 +235,4 @@ Interfaz 3 del receptor, página de uso `0xFF43`, solo informes HID++ largos (`0
 - Probado con la primera versión (receptor `0aba`). Los IDs `0aaa` y el PRO Wireless `0aa7` están incluidos porque usan la misma familia de protocolo, pero no se han probado.
 
 ## Licencia
-GPL-3.0-or-later. Proyecto independiente, **sin afiliación con Logitech**. Las imágenes del producto (`openlogi/assets/images`) son © Logitech, se usan solo para identificar el dispositivo y no están cubiertas por la licencia del código.
+GPL-3.0-or-later. Proyecto independiente, **sin afiliación con Logitech**. Las imágenes del producto (`openheadset/assets/images`) son © Logitech, se usan solo para identificar el dispositivo y no están cubiertas por la licencia del código.

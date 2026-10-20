@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "openlogi-headset"
+name = "open-headset"
 dynamic = ["version"]
 description = "G HUB-style control panel for Logitech PRO X Wireless headsets on Linux (HID++ 2.0)"
 readme = "README.md"
@@ -19,19 +19,19 @@ classifiers = [
 ]
 
 [project.scripts]
-openlogi-headsetctl = "openlogi.cli:main"
+open-headsetctl = "openheadset.cli:main"
 
 [project.gui-scripts]
-openlogi-headset = "openlogi.__main__:main"
+open-headset = "openheadset.__main__:main"
 
 [tool.setuptools.dynamic]
-version = { attr = "openlogi.__version__" }
+version = { attr = "openheadset.__version__" }
 
 [tool.setuptools.packages.find]
-include = ["openlogi*"]
+include = ["openheadset*"]
 
 [tool.setuptools.package-data]
-openlogi = ["assets/images/*.png", "assets/icons/*.svg"]
+openheadset = ["assets/images/*.png", "assets/icons/*.svg"]
 
 [tool.ruff]
 line-length = 120

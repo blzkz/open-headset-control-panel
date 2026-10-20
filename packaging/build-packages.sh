@@ -3,7 +3,7 @@
 #   packaging/build-packages.sh [VERSION]
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VERSION="${1:-$(python3 -c 'import openlogi; print(openlogi.__version__)')}"
+VERSION="${1:-$(python3 -c 'import openheadset; print(openheadset.__version__)')}"
 VERSION="${VERSION#v}"
 export VERSION
 packaging/stage.sh "$VERSION"
@@ -12,7 +12,7 @@ from pathlib import Path
 
 stage = Path("build/stage")
 lines = []
-for root in ("usr/share/openlogi-headset", "usr/share/doc/openlogi-headset"):
+for root in ("usr/share/open-headset", "usr/share/doc/open-headset"):
     base = stage / root
     for path in sorted([base, *base.rglob("*")]):
         dst = "/" + str(path.relative_to(stage))

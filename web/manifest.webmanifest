@@ -1,6 +1,6 @@
 {
-  "name": "OpenLogi HUB Web",
-  "short_name": "OpenLogi",
+  "name": "Open Headset Control Panel · Web",
+  "short_name": "Open Headset",
   "description": "Control Logitech HID++ headsets from the browser (WebHID)",
   "start_url": "./",
   "display": "standalone",

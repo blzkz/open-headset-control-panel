@@ -46,7 +46,7 @@ class Tray(QObject):
         self.ctl = ctl
         self.window = window
         self.tray = QSystemTrayIcon(tray_icon(None, False), self)
-        self.tray.setToolTip("OpenLogi Headset")
+        self.tray.setToolTip("Open Headset Control Panel")
         self.tray.activated.connect(self._activated)
         self._warned_low = False
         self._was_full: bool | None = None
@@ -101,7 +101,7 @@ class Tray(QObject):
         ctl.surroundChanged.connect(lambda: self.surround_action.setChecked(ctl.profile.surround.enabled))
         ctl.profileChanged.connect(self._rebuild_profiles)
         ctl.updates.available.connect(
-            lambda r: self._notify(tr("Update available"), tr("OpenLogi Headset {v} is ready to install.", v=r.version)))
+            lambda r: self._notify(tr("Update available"), tr("Open Headset Control Panel {v} is ready to install.", v=r.version)))
         self._rebuild_profiles()
         self._on_eq(ctl.profile.eq_gains, ctl.profile.eq_preset)
         self._on_sidetone(ctl.profile.sidetone)
@@ -143,7 +143,7 @@ class Tray(QObject):
         self.tray.setIcon(tray_icon(self.ctl.bridge.battery if online else None, online))
         if not online:
             self.status_action.setText(tr("Headset off") if state is LinkState.HEADSET_OFF else tr("Receiver not found"))
-            self.tray.setToolTip("OpenLogi Headset — " + self.status_action.text())
+            self.tray.setToolTip("Open Headset Control Panel — " + self.status_action.text())
         if self._last_state is not None and self.ctl.config.app.notify_connection:
             if online and self._last_state is not LinkState.CONNECTED:
                 self._notify(self._model(), tr("Headset connected"))
@@ -153,7 +153,7 @@ class Tray(QObject):
 
     def _model(self) -> str:
         dev = self.ctl.bridge.device
-        return dev.model if dev is not None else "OpenLogi Headset"
+        return dev.model if dev is not None else "Open Headset Control Panel"
 
     def _on_battery(self, b: BatteryState) -> None:
         self.tray.setIcon(tray_icon(b, True))

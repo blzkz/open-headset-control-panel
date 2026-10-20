@@ -109,7 +109,7 @@ class _SerialWorker:
         self._order: list[str] = []
         self._cv = threading.Condition()
         self._stop = False
-        self._thread = threading.Thread(target=self._run, name="openlogi-audio", daemon=True)
+        self._thread = threading.Thread(target=self._run, name="open-headset-audio", daemon=True)
         self._thread.start()
 
     def submit(self, key: str, fn: Callable[[], None]) -> None:
@@ -225,7 +225,7 @@ class AudioManager(QObject):
         self._worker.submit(f"default-{kind}", lambda: pulse.set_default(kind, name))
 
     # -- effects -------------------------------------------------------------------------
-    def apply_voice(self, cfg: VoiceSettings, description: str = "OpenLogi · Voice") -> None:
+    def apply_voice(self, cfg: VoiceSettings, description: str = "Open Headset · Voice") -> None:
         self._voice_cfg = replace(cfg)
         mic = self.state.source.name if self.state.source else None
         snapshot = self._voice_cfg
@@ -243,7 +243,7 @@ class AudioManager(QObject):
 
         self._worker.submit("voice", job)
 
-    def apply_surround(self, cfg: SurroundSettings, description: str = "OpenLogi · 7.1 Surround") -> None:
+    def apply_surround(self, cfg: SurroundSettings, description: str = "Open Headset · 7.1 Surround") -> None:
         self._surround_cfg = replace(cfg)
         sink = self.state.sink.name if self.state.sink else None
         snapshot = self._surround_cfg

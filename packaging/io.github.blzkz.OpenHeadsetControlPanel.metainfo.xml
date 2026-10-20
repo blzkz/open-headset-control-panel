@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.blzkz.OpenLogiHeadset</id>
+  <id>io.github.blzkz.OpenHeadsetControlPanel</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <name>OpenLogi Headset</name>
+  <name>Open Headset Control Panel</name>
   <summary>G HUB-style control panel for gaming headsets</summary>
   <summary xml:lang="es">Panel de control estilo G HUB para auriculares gaming</summary>
   <description>
@@ -18,18 +18,18 @@
     HeadsetControl. Ecualizador integrado, sidetone, batería, mezcla juego/chat, opciones de micrófono y energía,
     mejora de voz y sonido envolvente 7.1 virtual con PipeWire, perfiles e icono en la bandeja.</p>
   </description>
-  <launchable type="desktop-id">openlogi-headset.desktop</launchable>
-  <url type="homepage">https://github.com/blzkz/openLogiHeadsetControlPanel</url>
-  <url type="bugtracker">https://github.com/blzkz/openLogiHeadsetControlPanel/issues</url>
+  <launchable type="desktop-id">open-headset.desktop</launchable>
+  <url type="homepage">https://github.com/blzkz/open-headset-control-panel</url>
+  <url type="bugtracker">https://github.com/blzkz/open-headset-control-panel/issues</url>
   <developer id="io.github.blzkz">
     <name>blzkz</name>
   </developer>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/blzkz/openLogiHeadsetControlPanel/main/docs/screenshots/home.png</image>
+      <image>https://raw.githubusercontent.com/blzkz/open-headset-control-panel/main/docs/screenshots/home.png</image>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/blzkz/openLogiHeadsetControlPanel/main/docs/screenshots/eq.png</image>
+      <image>https://raw.githubusercontent.com/blzkz/open-headset-control-panel/main/docs/screenshots/eq.png</image>
     </screenshot>
   </screenshots>
   <provides>

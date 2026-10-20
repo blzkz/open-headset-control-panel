@@ -9,9 +9,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from openlogi.drivers import REGISTRY  # noqa: E402
-from openlogi.drivers.base import Cap  # noqa: E402
-from openlogi.drivers.session import VENDOR_NAMES  # noqa: E402
+from openheadset.drivers import REGISTRY  # noqa: E402
+from openheadset.drivers.base import Cap  # noqa: E402
+from openheadset.drivers.session import VENDOR_NAMES  # noqa: E402
 
 START, END = "<!-- devices:start -->", "<!-- devices:end -->"
 LABELS = {

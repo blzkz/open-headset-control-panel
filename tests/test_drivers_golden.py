@@ -14,8 +14,8 @@ import unittest
 from collections import OrderedDict
 from pathlib import Path
 
-from openlogi.drivers import REGISTRY
-from openlogi.drivers.base import (
+from openheadset.drivers import REGISTRY
+from openheadset.drivers.base import (
     Battery,
     Chatmix,
     DriverError,

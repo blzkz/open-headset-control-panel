@@ -1,4 +1,4 @@
-"""Qt wrapper around :mod:`openlogi.updater`: background checks, download progress, restart."""
+"""Qt wrapper around :mod:`openheadset.updater`: background checks, download progress, restart."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ class UpdateManager(QObject):
         self.busy = True
         self.error = ""
         self.changed.emit()
-        threading.Thread(target=target, name="openlogi-update", daemon=True).start()
+        threading.Thread(target=target, name="open-headset-update", daemon=True).start()
 
     # -- check ------------------------------------------------------------------------------
     def check(self) -> None:

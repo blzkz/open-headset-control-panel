@@ -84,9 +84,9 @@ class TitleBar(QFrame):
 
         brand = QHBoxLayout()
         brand.setSpacing(6)
-        b1 = QLabel("OPENLOGI")
+        b1 = QLabel("OPEN HEADSET")
         b1.setObjectName("Brand")
-        b2 = QLabel("HUB")
+        b2 = QLabel("CONTROL PANEL")
         b2.setObjectName("BrandAccent")
         brand.addWidget(b1)
         brand.addWidget(b2)
@@ -326,7 +326,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ctl = ctl
         self.allow_close = False
-        self.setWindowTitle("OpenLogi Headset")
+        self.setWindowTitle("Open Headset Control Panel")
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.resize(1280, 820)
         self.setMinimumSize(1000, 660)

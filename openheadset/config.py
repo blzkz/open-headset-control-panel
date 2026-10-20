@@ -1,18 +1,32 @@
-"""Persistent settings and profiles (``~/.config/openlogi-headset/config.json``)."""
+"""Persistent settings and profiles (``~/.config/open-headset/config.json``)."""
 
 from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any
 
-APP_ID = "openlogi-headset"
+APP_ID = "open-headset"
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / APP_ID
 CONFIG_FILE = CONFIG_DIR / "config.json"
 RUNTIME_DIR = Path(os.environ.get("XDG_RUNTIME_DIR", tempfile.gettempdir())) / APP_ID
+CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / APP_ID
+LEGACY_ID = "openlogi-headset"  # the app was called "OpenLogi Headset" up to 1.2
+
+
+def migrate_legacy() -> None:
+    """First run under the new name: carry over settings, profiles and battery history."""
+    for new in (CONFIG_DIR, CACHE_DIR):
+        old = new.parent / LEGACY_ID
+        if old.is_dir() and not new.exists():
+            try:
+                shutil.copytree(old, new)
+            except OSError:
+                pass
 
 
 def _from_dict(cls, data: dict[str, Any] | None):
@@ -184,6 +198,8 @@ class Config:
 
     @classmethod
     def load(cls, path: Path = CONFIG_FILE) -> Config:
+        if path == CONFIG_FILE and not path.exists():
+            migrate_legacy()
         try:
             return cls.from_json(json.loads(path.read_text()))
         except (OSError, ValueError):

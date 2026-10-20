@@ -6,17 +6,17 @@ set -euo pipefail
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}"
-APPDIR="$PREFIX/openlogi-headset"
+APPDIR="$PREFIX/open-headset"
 BINDIR="$HOME/.local/bin"
-RULE=/etc/udev/rules.d/70-openlogi-headset.rules
+RULE=/etc/udev/rules.d/70-open-headset.rules
 
 if [[ "${1:-}" == "--uninstall" ]]; then
     rm -rf -- "${APPDIR:?}"
-    rm -f -- "$BINDIR/openlogi-headset" "$BINDIR/openlogi-headsetctl" \
-        "$PREFIX/applications/openlogi-headset.desktop" \
-        "$PREFIX/icons/hicolor/scalable/apps/openlogi-headset.svg" \
-        "$HOME/.config/autostart/openlogi-headset.desktop"
-    echo "Uninstalled. (Config kept in ~/.config/openlogi-headset; udev rule: sudo rm $RULE)"
+    rm -f -- "$BINDIR/open-headset" "$BINDIR/open-headsetctl" \
+        "$PREFIX/applications/open-headset.desktop" \
+        "$PREFIX/icons/hicolor/scalable/apps/open-headset.svg" \
+        "$HOME/.config/autostart/open-headset.desktop"
+    echo "Uninstalled. (Config kept in ~/.config/open-headset; udev rule: sudo rm $RULE)"
     exit 0
 fi
 
@@ -26,29 +26,29 @@ python3 -c 'import PyQt6.QtWidgets, PyQt6.QtSvg, PyQt6.QtMultimedia' 2>/dev/null
 }
 
 mkdir -p "$APPDIR" "$BINDIR" "$PREFIX/applications" "$PREFIX/icons/hicolor/scalable/apps"
-rm -rf -- "${APPDIR:?}/openlogi"
-cp -r "$SRC/openlogi" "$APPDIR/"
+rm -rf -- "${APPDIR:?}/openheadset"
+cp -r "$SRC/openheadset" "$APPDIR/"
 find "$APPDIR" -name '__pycache__' -type d -prune -exec rm -rf {} +
 
-for pair in "openlogi-headset:" "openlogi-headsetctl:ctl "; do
+for pair in "open-headset:" "open-headsetctl:ctl "; do
     name="${pair%%:*}"; sub="${pair#*:}"
     cat > "$BINDIR/$name" <<SH
 #!/bin/sh
-PYTHONPATH="$APPDIR\${PYTHONPATH:+:\$PYTHONPATH}" exec python3 -m openlogi ${sub}"\$@"
+PYTHONPATH="$APPDIR\${PYTHONPATH:+:\$PYTHONPATH}" exec python3 -m openheadset ${sub}"\$@"
 SH
     chmod +x "$BINDIR/$name"
 done
 
-sed "s|^Exec=.*|Exec=$BINDIR/openlogi-headset|" "$SRC/packaging/openlogi-headset.desktop" \
-    > "$PREFIX/applications/openlogi-headset.desktop"
-cp "$SRC/openlogi/assets/icons/openlogi-headset.svg" "$PREFIX/icons/hicolor/scalable/apps/"
+sed "s|^Exec=.*|Exec=$BINDIR/open-headset|" "$SRC/packaging/open-headset.desktop" \
+    > "$PREFIX/applications/open-headset.desktop"
+cp "$SRC/openheadset/assets/icons/open-headset.svg" "$PREFIX/icons/hicolor/scalable/apps/"
 command -v update-desktop-database >/dev/null && update-desktop-database "$PREFIX/applications" || true
 
 echo "Installed to $APPDIR"
-echo "  GUI: openlogi-headset      CLI: openlogi-headsetctl --help"
+echo "  GUI: open-headset      CLI: open-headsetctl --help"
 
 if [[ ! -f "$RULE" ]]; then
     echo
     echo "Optional: install the udev rule so the headset is accessible without root:"
-    echo "  sudo install -m644 '$SRC/packaging/70-openlogi-headset.rules' $RULE && sudo udevadm control --reload && sudo udevadm trigger"
+    echo "  sudo install -m644 '$SRC/packaging/70-open-headset.rules' $RULE && sudo udevadm control --reload && sudo udevadm trigger"
 fi

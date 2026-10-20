@@ -20,12 +20,12 @@ The estimator below therefore:
 from __future__ import annotations
 
 import json
-import os
 import time
 from bisect import bisect_left
 from dataclasses import dataclass
 from pathlib import Path
 
+from .config import CACHE_DIR  # noqa: F401  (re-exported for the service)
 from .models import CURVE_PRO_X, Curve
 
 DISCHARGE_CURVE: Curve = CURVE_PRO_X
@@ -35,7 +35,6 @@ FULL_HOURS = 20.0  # Logitech's rated battery life
 CHARGE_HOURS = 3.0  # empty → full on USB
 FULL_CHARGE_MV = 4180  # CV phase reached: the cell is (almost) full
 
-CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "openlogi-headset"
 
 
 def percent_from_millivolts(mv: float, charging: bool = False, curve: Curve = DISCHARGE_CURVE) -> float:

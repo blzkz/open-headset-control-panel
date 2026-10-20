@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import unittest
 
-from openlogi.battery import BatteryState
-from openlogi.drivers.base import Battery, BatteryStatus, Cap, CapDetail, Chatmix, Driver, EqInfo, Sidetone
-from openlogi.drivers.hidio import HidEntry, collection_usages, select_path
-from openlogi.presets import PRESETS_BY_KEY, EqLayout, fit_gains, match_preset
-from openlogi.service import HeadsetService, LinkState, ServiceListener
+from openheadset.battery import BatteryState
+from openheadset.drivers.base import Battery, BatteryStatus, Cap, CapDetail, Chatmix, Driver, EqInfo, Sidetone
+from openheadset.drivers.hidio import HidEntry, collection_usages, select_path
+from openheadset.presets import PRESETS_BY_KEY, EqLayout, fit_gains, match_preset
+from openheadset.service import HeadsetService, LinkState, ServiceListener
 
 
 class Descriptors(unittest.TestCase):

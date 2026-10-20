@@ -16,7 +16,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from ..config import RUNTIME_DIR
+from ..config import LEGACY_ID, RUNTIME_DIR
 
 _CLIENT_HEADER = """\
 context.properties = {
@@ -102,18 +102,21 @@ class FilterProcess:
         return self._proc is not None and self._proc.poll() is None
 
     def _kill_stale(self) -> None:
-        """Terminate a leftover process from a previous crashed session."""
-        try:
-            pid = int(self.pid_path.read_text())
-            cmdline = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
-        except (OSError, ValueError):
-            return
-        if str(self.conf_path).encode() in cmdline:
+        """Terminate a leftover process from a previous crashed session (also under the app's old name)."""
+        legacy = RUNTIME_DIR.parent / LEGACY_ID
+        for conf_path, pid_path in ((self.conf_path, self.pid_path),
+                                    (legacy / self.conf_path.name, legacy / self.pid_path.name)):
             try:
-                os.kill(pid, signal.SIGTERM)
-            except OSError:
-                pass
-        self.pid_path.unlink(missing_ok=True)
+                pid = int(pid_path.read_text())
+                cmdline = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+            except (OSError, ValueError):
+                continue
+            if str(conf_path).encode() in cmdline:
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except OSError:
+                    pass
+            pid_path.unlink(missing_ok=True)
 
     def start(self, conf_text: str) -> None:
         if self.running and conf_text == self._conf_text:

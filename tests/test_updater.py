@@ -8,15 +8,15 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from openlogi import updater
-from openlogi.updater import InstallKind, Release
+from openheadset import updater
+from openheadset.updater import InstallKind, Release
 
 ASSETS = {name: f"https://api.github.com/assets/{i}" for i, name in enumerate([
-    "openlogi-headset-1.2.0-1-any.pkg.tar.zst",
-    "openlogi-headset-1.2.0-1.noarch.rpm",
-    "openlogi-headset_1.2.0-1_all.deb",
-    "OpenLogi_Headset-1.2.0-x86_64.AppImage",
-    "openlogi_headset-1.2.0-py3-none-any.whl",
+    "open-headset-1.2.0-1-any.pkg.tar.zst",
+    "open-headset-1.2.0-1.noarch.rpm",
+    "open-headset_1.2.0-1_all.deb",
+    "Open_Headset_Control_Panel-1.2.0-x86_64.AppImage",
+    "openheadset_headset-1.2.0-py3-none-any.whl",
     "SHA256SUMS",
 ])}
 
@@ -51,7 +51,7 @@ class UpdaterTests(unittest.TestCase):
 
     def test_appimage_is_replaced_atomically(self) -> None:
         with tempfile.TemporaryDirectory() as d:
-            current = Path(d) / "OpenLogi.AppImage"
+            current = Path(d) / "OpenHeadset.AppImage"
             current.write_bytes(b"old")
             new = Path(d) / "download.AppImage"
             new.write_bytes(b"new")

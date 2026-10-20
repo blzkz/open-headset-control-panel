@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .models import ALL_PIDS
 
-RULE_NAME = "70-openlogi-headset.rules"
+RULE_NAME = "70-open-headset.rules"
 LOGITECH_VID = 0x046D
 
 
@@ -26,8 +26,8 @@ def supported_ids() -> dict[int, list[int]]:
 def udev_rule() -> str:
     from .drivers.session import VENDOR_NAMES
 
-    lines = ["# OpenLogi Headset: let the logged-in user configure supported headsets over hidraw.",
-             "# Generated from openlogi/models.py and openlogi/drivers (python3 -m openlogi.permissions)."]
+    lines = ["# Open Headset Control Panel: let the logged-in user configure supported headsets over hidraw.",
+             "# Generated from openheadset/models.py and openheadset/drivers (python3 -m openheadset.permissions)."]
     for vid, pids in supported_ids().items():
         lines.append(f"# {VENDOR_NAMES.get(vid, f'{vid:04x}')}")
         lines.append(f'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="{vid:04x}", '
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     packaging = Path(__file__).resolve().parents[1] / "packaging"
     (packaging / RULE_NAME).write_text(RULE)
-    meta = packaging / "io.github.blzkz.OpenLogiHeadset.metainfo.xml"
+    meta = packaging / "io.github.blzkz.OpenHeadsetControlPanel.metainfo.xml"
     block = "".join(f"    <modalias>{m}</modalias>\n" for m in modaliases())
     meta.write_text(re.sub(r"  <provides>\n.*?  </provides>", f"  <provides>\n{block}  </provides>",
                            meta.read_text(), flags=re.S))

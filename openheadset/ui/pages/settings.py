@@ -28,7 +28,15 @@ from .. import theme
 from ..icons import icon
 from ..widgets.common import Card, SwitchRow, ValueSlider, hline, label
 
-AUTOSTART = Path.home() / ".config" / "autostart" / "openlogi-headset.desktop"
+AUTOSTART = Path.home() / ".config" / "autostart" / "open-headset.desktop"
+
+
+def migrate_autostart() -> None:
+    """Replace the login entry of the app's old name, whose command no longer exists."""
+    legacy = AUTOSTART.parent / "openlogi-headset.desktop"
+    if legacy.exists():
+        legacy.unlink(missing_ok=True)
+        set_autostart(True)
 
 
 def autostart_enabled() -> bool:
@@ -40,19 +48,19 @@ def set_autostart(on: bool) -> None:
         AUTOSTART.unlink(missing_ok=True)
         return
     AUTOSTART.parent.mkdir(parents=True, exist_ok=True)
-    launcher = os.environ.get("APPIMAGE") or shutil.which("openlogi-headset")
+    launcher = os.environ.get("APPIMAGE") or shutil.which("open-headset")
     if launcher:
         exec_line = f"{launcher} --minimized"
     else:  # running from a source checkout
         project = Path(__file__).resolve().parents[3]
-        exec_line = f"env PYTHONPATH={project} {sys.executable} -m openlogi --minimized"
+        exec_line = f"env PYTHONPATH={project} {sys.executable} -m openheadset --minimized"
     AUTOSTART.write_text(
         "[Desktop Entry]\n"
         "Type=Application\n"
-        "Name=OpenLogi Headset\n"
-        "Comment=Logitech PRO X Wireless control panel\n"
+        "Name=Open Headset Control Panel\n"
+        "Comment=Control panel for gaming headsets\n"
         f"Exec={exec_line}\n"
-        "Icon=openlogi-headset\n"
+        "Icon=open-headset\n"
         "X-GNOME-Autostart-enabled=true\n"
         "X-KDE-autostart-after=panel\n"
     )
@@ -188,7 +196,7 @@ class SettingsPage(QWidget):
 
         # -- about -----------------------------------------------------------------------------------
         about = Card(tr("About"))
-        about.body.addWidget(label(f"OPENLOGI HEADSET  ·  v{__version__}", "H2"))
+        about.body.addWidget(label(f"OPEN HEADSET CONTROL PANEL  ·  v{__version__}", "H2"))
         about.body.addWidget(label(tr("Open-source control panel for Logitech headsets on Linux."), "Muted", wrap=True))
         about.body.addWidget(label(tr("Not affiliated with Logitech. Product images © Logitech."), "Faint", wrap=True))
         cfg = label(str(CONFIG_FILE), "Faint")

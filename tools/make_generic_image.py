@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw openlogi/assets/images/headset-generic.png: a neutral headset for models without a photo."""
+"""Draw openheadset/assets/images/headset-generic.png: a neutral headset for models without a photo."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtCore import QPointF, QRectF, Qt  # noqa: E402
 from PyQt6.QtGui import QColor, QGuiApplication, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QRadialGradient  # noqa: E402
 
-OUT = Path(__file__).resolve().parents[1] / "openlogi" / "assets" / "images" / "headset-generic.png"
+OUT = Path(__file__).resolve().parents[1] / "openheadset" / "assets" / "images" / "headset-generic.png"
 W, H = 680, 860
 
 

@@ -1,4 +1,4 @@
-// OpenLogi HUB Web: WebHID front-end for Logitech HID++ 2.0 headsets.
+// Open Headset Control Panel · Web: WebHID front-end for gaming headsets.
 import { BatteryEstimator, Headset, HidppError, hoursLeft, hoursToFull } from "./device.js";
 import { EqGraph } from "./eqgraph.js";
 import { Feature, HidppTimeout, REPORT_LONG } from "./hidpp.js";
@@ -8,7 +8,7 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 const SWATCHES = ["#00b4f5", "#ffffff", "#ff2d55", "#ff6a00", "#ffd60a", "#32d74b", "#00e5c0", "#5e5ce6", "#bf5af2"];
 const AUTO_OFF = [0, 5, 10, 15, 20, 30, 45, 60, 90, 120];
-const STORE_KEY = "openlogi.web.v1";
+const STORE_KEY = "openheadset.web.v1";
 
 let DATA = null; // models.json
 let headset = null; // connected Headset
@@ -481,7 +481,7 @@ async function attach(dev) {
   if (headset) await detach();
   if (!dev.opened) await dev.open();
   headset = new Headset(dev, modelFor(dev));
-  estimator = new BatteryEstimator(headset.model.curve, `openlogi.battery.${headset.model.key}`);
+  estimator = new BatteryEstimator(headset.model.curve, `openheadset.battery.${headset.model.key}`);
   headset.hidpp.onEvent = (ev) => onEvent(ev);
   showApp(true);
   showPage(page);

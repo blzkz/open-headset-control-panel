@@ -1,4 +1,4 @@
-"""Generate openlogi/drivers/specs.py (ids, capabilities, EQ data) from the golden file.
+"""Generate openheadset/drivers/specs.py (ids, capabilities, EQ data) from the golden file.
 
     python3 tools/gen_driver_specs.py
 
@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 GOLDEN = ROOT / "tests" / "data" / "headsetcontrol_golden.json.gz"
 # Band layout read from the headset at run time; the golden file only has what the script replied.
 EQ_FROM_DEVICE = {"Logitech G PRO X 2 LIGHTSPEED"}
-OUT = ROOT / "openlogi" / "drivers" / "specs.py"
+OUT = ROOT / "openheadset" / "drivers" / "specs.py"
 
 
 def main() -> None:

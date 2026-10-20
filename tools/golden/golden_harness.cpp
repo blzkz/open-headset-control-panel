@@ -1,6 +1,6 @@
 // Golden-packet harness: runs every HeadsetControl driver against a recording HID
 // interface and dumps what it writes (and how it parses canned replies) as JSON.
-// The OpenLogi Python ports must reproduce these bytes exactly.
+// The Python ports must reproduce these bytes exactly.
 #include "device_registry.hpp"
 #include "devices/hid_device.hpp"
 #include "devices/hid_interface.hpp"

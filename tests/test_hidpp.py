@@ -6,11 +6,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from openlogi.battery import BatteryEstimator, percent_from_millivolts
-from openlogi.config import Config, Profile
-from openlogi.hidpp.features import AdcBattery, Equalizer, Sidetone, read_firmware, read_name
-from openlogi.hidpp.features import DeviceIdentity
-from openlogi.hidpp.protocol import (
+from openheadset.battery import BatteryEstimator, percent_from_millivolts
+from openheadset.config import Config, Profile
+from openheadset.hidpp.features import AdcBattery, Equalizer, Sidetone, read_firmware, read_name
+from openheadset.hidpp.features import DeviceIdentity
+from openheadset.hidpp.protocol import (
     FeatureId,
     FeatureNotSupported,
     Hidpp20Device,
@@ -18,9 +18,9 @@ from openlogi.hidpp.protocol import (
     HidppTimeout,
     Message,
 )
-from openlogi.presets import CUSTOM_KEY, PRESETS_BY_KEY, match_preset
-from openlogi.audio.filterchain import spa_value
-from openlogi.audio.pulse import is_relevant_event
+from openheadset.presets import CUSTOM_KEY, PRESETS_BY_KEY, match_preset
+from openheadset.audio.filterchain import spa_value
+from openheadset.audio.pulse import is_relevant_event
 
 FEATURES = [0x0000, 0x0001, 0x0003, 0x0005, 0x8310, 0x8300, 0x1F20]
 FREQS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
@@ -193,8 +193,8 @@ class ProtocolTests(unittest.TestCase):
 
 class MultiModelTests(unittest.TestCase):
     def _headset(self, pid: int, fake: FakeHeadset):
-        from openlogi.device import Headset
-        from openlogi.hidpp.transport import HidrawInfo
+        from openheadset.device import Headset
+        from openheadset.hidpp.transport import HidrawInfo
 
         hs = Headset(HidrawInfo("/dev/fake", 0x046D, pid, "fake", "", True, True), Hidpp20Device(fake))
         hs.probe()
@@ -216,29 +216,29 @@ class MultiModelTests(unittest.TestCase):
         self.assertFalse(hs.caps.auto_off)  # no ADC feature → no timer
         reading = hs.read_battery()
         self.assertEqual((reading.percent, reading.charging), (64, False))
-        from openlogi.hidpp.features import LightMode
+        from openheadset.hidpp.features import LightMode
         hs.leds.set_zone(1, LightMode.BREATHING, (0, 0xB6, 0xFF))
         self.assertEqual(fake.leds[-1], bytes([1, 2, 0x00, 0xB6, 0xFF, 0x0F, 0xA0, 0x00, 0x64]))
 
     def test_udev_rules_cover_every_model(self) -> None:
-        from openlogi.models import ALL_PIDS
-        from openlogi.permissions import RULE
+        from openheadset.models import ALL_PIDS
+        from openheadset.permissions import RULE
 
-        packaged = (Path(__file__).parent.parent / "packaging" / "70-openlogi-headset.rules").read_text()
-        self.assertEqual(packaged, RULE, "regenerate with: python3 -m openlogi.permissions")
+        packaged = (Path(__file__).parent.parent / "packaging" / "70-open-headset.rules").read_text()
+        self.assertEqual(packaged, RULE, "regenerate with: python3 -m openheadset.permissions")
         for pid in ALL_PIDS:
             self.assertIn(f"{pid:04x}", RULE)
 
     def test_metainfo_lists_every_supported_device(self) -> None:
-        from openlogi.permissions import modaliases
+        from openheadset.permissions import modaliases
 
-        meta = (Path(__file__).parent.parent / "packaging" / "io.github.blzkz.OpenLogiHeadset.metainfo.xml").read_text()
+        meta = (Path(__file__).parent.parent / "packaging" / "io.github.blzkz.OpenHeadsetControlPanel.metainfo.xml").read_text()
         listed = [line.strip()[10:-11] for line in meta.splitlines() if "<modalias>" in line]
-        self.assertEqual(listed, modaliases(), "regenerate with: python3 -m openlogi.permissions")
+        self.assertEqual(listed, modaliases(), "regenerate with: python3 -m openheadset.permissions")
 
     def test_udev_rules_cover_every_driver(self) -> None:
-        from openlogi.drivers import REGISTRY
-        from openlogi.permissions import RULE
+        from openheadset.drivers import REGISTRY
+        from openheadset.permissions import RULE
 
         for cls in REGISTRY.drivers:
             line = next(ln for ln in RULE.splitlines() if f'idVendor}}=="{cls.VENDOR:04x}"' in ln)
@@ -248,8 +248,8 @@ class MultiModelTests(unittest.TestCase):
     def test_receiver_selection_prefers_vendor_collection(self) -> None:
         from unittest import mock
 
-        from openlogi import device
-        from openlogi.hidpp.transport import HidrawInfo
+        from openheadset import device
+        from openheadset.hidpp.transport import HidrawInfo
 
         nodes = [
             HidrawInfo("/dev/hidraw1", 0x046D, 0x0A66, "G533", "usb-1-2/input0", True, False),

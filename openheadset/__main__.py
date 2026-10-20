@@ -1,4 +1,4 @@
-"""Entry point: ``python -m openlogi`` (GUI) or ``python -m openlogi ctl ...`` (CLI)."""
+"""Entry point: ``python -m openheadset`` (GUI) or ``python -m openheadset ctl ...`` (CLI)."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def main(argv: list[str] | None = None) -> int:
 
         return cli_main(argv[1:])
 
-    parser = argparse.ArgumentParser(prog="openlogi-headset", description="Logitech PRO X Wireless control panel")
+    parser = argparse.ArgumentParser(prog="open-headset", description="Logitech PRO X Wireless control panel")
     parser.add_argument("--minimized", action="store_true", help="start hidden in the system tray")
     parser.add_argument("--page", choices=["equalizer", "mic", "surround", "info", "settings"], help="open a device page")
     parser.add_argument("-v", "--verbose", action="store_true", help="debug logging")

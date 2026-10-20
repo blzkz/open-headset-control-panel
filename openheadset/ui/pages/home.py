@@ -100,7 +100,7 @@ class HomePage(QWidget):
         self.charge_chip = StatusPill("bolt", tr("Charging").upper())
         self.exp_chip = StatusPill("info", tr("Experimental support").upper())
         self.exp_chip.setToolTip(tr("This model has not been tested on real hardware yet. If something misbehaves, "
-                                    "open an issue with the output of “openlogi-headsetctl --diagnose”."))
+                                    "open an issue with the output of “open-headsetctl --diagnose”."))
         self.exp_chip.hide()
         chips.addWidget(self.link_chip)
         chips.addWidget(self.charge_chip)
@@ -165,11 +165,11 @@ class HomePage(QWidget):
         if d.backend == "hidpp":
             self._link = "LIGHTSPEED" if d.wireless else "USB"
             self.exp_chip.setToolTip(tr("This model has not been tested on real hardware yet. If something "
-                                        "misbehaves, open an issue with the output of “openlogi-headsetctl --diagnose”."))
+                                        "misbehaves, open an issue with the output of “open-headsetctl --diagnose”."))
         else:
             self._link = tr("Wireless").upper() if d.wireless else "USB"
             self.exp_chip.setToolTip(tr("Driven by a port of HeadsetControl's driver for this model, checked "
-                                        "byte by byte against it, but not yet tested with OpenLogi on real hardware."))
+                                        "byte by byte against it, but not yet tested with this app on real hardware."))
         self.exp_chip.setVisible(not d.verified)
         self.exp_chip.set_active(True)
         self._on_state(self.ctl.bridge.state, "")

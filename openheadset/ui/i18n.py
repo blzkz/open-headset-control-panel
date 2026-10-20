@@ -150,8 +150,8 @@ _ES: dict[str, str] = {
     "Never": "Nunca",
     "{n} min": "{n} min",
     "Experimental support": "Soporte experimental",
-    "This model has not been tested on real hardware yet. If something misbehaves, open an issue with the output of “openlogi-headsetctl --diagnose”.":
-        "Este modelo aún no se ha probado con el hardware real. Si algo no funciona, abre una incidencia con la salida de «openlogi-headsetctl --diagnose».",
+    "This model has not been tested on real hardware yet. If something misbehaves, open an issue with the output of “open-headsetctl --diagnose”.":
+        "Este modelo aún no se ha probado con el hardware real. Si algo no funciona, abre una incidencia con la salida de «open-headsetctl --diagnose».",
     "This model has no onboard equalizer": "Este modelo no tiene ecualizador integrado",
     "Start at login": "Iniciar al iniciar sesión",
     "Start minimized": "Iniciar minimizado",
@@ -173,7 +173,7 @@ _ES: dict[str, str] = {
     "Installing…": "Instalando…",
     "You are up to date": "Tienes la última versión",
     "Update available": "Actualización disponible",
-    "OpenLogi Headset {v} is ready to install.": "OpenLogi Headset {v} está listo para instalar.",
+    "Open Headset Control Panel {v} is ready to install.": "Open Headset Control Panel {v} está listo para instalar.",
     "Could not check for updates": "No se pudo comprobar si hay actualizaciones",
     "Update failed": "La actualización falló",
     "Installed from source: update with git pull": "Instalado desde el código fuente: actualiza con git pull",
@@ -242,7 +242,7 @@ _ES: dict[str, str] = {
     'stored in the headset': 'se guarda en los auriculares',
     'Plug in your headset or its wireless receiver': 'Conecta los auriculares o su receptor inalámbrico',
     'Wireless': 'Inalámbrico',
-    "Driven by a port of HeadsetControl's driver for this model, checked byte by byte against it, but not yet tested with OpenLogi on real hardware.": 'Funciona con una adaptación del controlador de HeadsetControl para este modelo, comprobada byte a byte, pero aún no probada con OpenLogi en un dispositivo real.',
+    "Driven by a port of HeadsetControl's driver for this model, checked byte by byte against it, but not yet tested with this app on real hardware.": 'Funciona con una adaptación del controlador de HeadsetControl para este modelo, comprobada byte a byte, pero aún no probada con esta app en un dispositivo real.',
     'Link': 'Conexión',
     'Protocol': 'Protocolo',
     'Vendor': 'Fabricante',

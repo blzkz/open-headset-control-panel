@@ -106,7 +106,7 @@ class HeadsetService(threading.Thread):
     CABLE_SETTLE = 12.0
 
     def __init__(self, listener: ServiceListener, battery_interval: float = 30.0):
-        super().__init__(name="openlogi-hid", daemon=True)
+        super().__init__(name="open-headset-hid", daemon=True)
         self.listener = listener
         self.battery_interval = battery_interval
         self._wake = threading.Event()

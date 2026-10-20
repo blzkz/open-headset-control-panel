@@ -4,5 +4,5 @@
 case "$1" in
     1|upgrade|failed-upgrade) exit 0 ;;
 esac
-find /usr/share/openlogi-headset -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
+find /usr/share/open-headset -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
 exit 0

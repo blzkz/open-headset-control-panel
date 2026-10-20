@@ -197,7 +197,7 @@ def _msg(typ: int, body) -> bytes:
 
 
 def maxwell(name: str, eq: bool) -> None:
-    from openlogi.drivers.audeze import EQ_FREQUENCIES, eq_coefficients
+    from openheadset.drivers.audeze import EQ_FREQUENCIES, eq_coefficients
 
     def req(cmd: tuple[int, int], *messages: bytes, arg=(), note: str = "") -> None:
         reports = [r for m in messages for r in _maxwell_reports(m)]
