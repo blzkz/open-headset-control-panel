@@ -287,6 +287,8 @@ class Driver:
     # False when the original derives read timeouts from the wall clock (the golden test
     # then compares bytes but not those clock-derived values)
     TIMING_EXACT: bool = True
+    PRESET_COUNT: int = 0  # onboard EQ presets (names in EQ_PRESETS when HeadsetControl has them)
+    EQ_FREQUENCIES: tuple[int, ...] = ()  # band centres for the UI; HeadsetControl does not define them
     EQ_FROM_DEVICE: bool = False  # EQ layout is read from the headset (see equalizer_info)
 
     def __init__(self, product_id: int = 0) -> None:
@@ -394,6 +396,7 @@ def driver(name: str, *, image: str = "", wireless: bool = True):
         cls.EQ = spec["eq"]
         cls.PEQ = spec["peq"]
         cls.EQ_PRESETS = spec["presets"]
+        cls.PRESET_COUNT = spec["preset_count"]
         cls.IMAGE = image
         cls.WIRELESS = wireless
         return register(cls)

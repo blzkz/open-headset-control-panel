@@ -18,7 +18,7 @@ from ..widgets.visuals import HeadsetView
 
 
 def battery_text(b: BatteryState | None) -> str:
-    if b is None:
+    if b is None or b.percent < 0:
         return "—"
     return f"{b.percent}%"
 
@@ -29,10 +29,10 @@ def battery_detail(b: BatteryState | None) -> str:
     if b.full:
         return tr("Fully charged")
     if b.charging:
-        hrs = b.hours_to_full
+        hrs = b.hours_to_full if b.percent >= 0 else None
         return tr("Charging") + (f" · {tr('≈ {h} h to full', h=f'{hrs:.1f}')}" if hrs else "")
     hrs = b.remaining_hours
-    return tr("≈ {h} h remaining", h=f"{hrs:.0f}") if hrs is not None else ""
+    return tr("≈ {h} h remaining", h=f"{hrs:.0f}") if hrs is not None and hrs >= 0 else ""
 
 
 class StatusPill(QWidget):
@@ -124,6 +124,7 @@ class HomePage(QWidget):
         root.addSpacing(8)
         root.addLayout(grow)
 
+        self._link = "LIGHTSPEED"
         b = ctl.bridge
         b.stateChanged.connect(self._on_state)
         b.batteryChanged.connect(self._on_battery)
@@ -137,7 +138,7 @@ class HomePage(QWidget):
         texts = {
             LinkState.CONNECTED: tr("Click the headset to configure it"),
             LinkState.HEADSET_OFF: tr("Turn on your headset"),
-            LinkState.NO_RECEIVER: tr("Plug in the LIGHTSPEED receiver"),
+            LinkState.NO_RECEIVER: tr("Plug in your headset or its wireless receiver"),
             LinkState.NO_PERMISSION: tr("Grant access to the hidraw device (see README: udev rule)"),
         }
         self.hint.setText(texts[state])
@@ -146,8 +147,8 @@ class HomePage(QWidget):
         self.link_chip.set_active(
             online,
             {
-                LinkState.CONNECTED: "LIGHTSPEED · " + tr("Connected").upper(),
-                LinkState.HEADSET_OFF: "LIGHTSPEED · " + tr("Headset off").upper(),
+                LinkState.CONNECTED: f"{self._link} · " + tr("Connected").upper(),
+                LinkState.HEADSET_OFF: f"{self._link} · " + tr("Headset off").upper(),
                 LinkState.NO_RECEIVER: tr("Receiver not found").upper(),
                 LinkState.NO_PERMISSION: tr("No permission").upper(),
             }[state],
@@ -161,8 +162,17 @@ class HomePage(QWidget):
     def _on_device(self, d) -> None:
         self.name.setText(d.model.upper())
         self.view.set_image(d.image)
+        if d.backend == "hidpp":
+            self._link = "LIGHTSPEED" if d.wireless else "USB"
+            self.exp_chip.setToolTip(tr("This model has not been tested on real hardware yet. If something "
+                                        "misbehaves, open an issue with the output of “openlogi-headsetctl --diagnose”."))
+        else:
+            self._link = tr("Wireless").upper() if d.wireless else "USB"
+            self.exp_chip.setToolTip(tr("Driven by a port of HeadsetControl's driver for this model, checked "
+                                        "byte by byte against it, but not yet tested with OpenLogi on real hardware."))
         self.exp_chip.setVisible(not d.verified)
         self.exp_chip.set_active(True)
+        self._on_state(self.ctl.bridge.state, "")
 
     def _grant_access(self) -> None:
         ok, msg = install_rule()

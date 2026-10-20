@@ -31,7 +31,7 @@ def tray_icon(battery: BatteryState | None, online: bool) -> QIcon:
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             p.setPen(pen)
             r = QRectF(pen.widthF() / 2, pen.widthF() / 2, px - pen.widthF(), px - pen.widthF())
-            p.drawArc(r, -90 * 16, int(-360 * 16 * battery.percent / 100))
+            p.drawArc(r, -90 * 16, int(-360 * 16 * max(0, battery.percent) / 100))
         elif not online:
             p.setPen(QPen(QColor(theme.BAD), max(1.5, px / 10)))
             p.drawLine(int(px * 0.15), int(px * 0.85), int(px * 0.85), int(px * 0.15))
@@ -146,20 +146,27 @@ class Tray(QObject):
             self.tray.setToolTip("OpenLogi Headset — " + self.status_action.text())
         if self._last_state is not None and self.ctl.config.app.notify_connection:
             if online and self._last_state is not LinkState.CONNECTED:
-                self._notify("PRO X Wireless", tr("Headset connected"))
+                self._notify(self._model(), tr("Headset connected"))
             elif not online and self._last_state is LinkState.CONNECTED:
-                self._notify("PRO X Wireless", tr("Headset disconnected"))
+                self._notify(self._model(), tr("Headset disconnected"))
         self._last_state = state
+
+    def _model(self) -> str:
+        dev = self.ctl.bridge.device
+        return dev.model if dev is not None else "OpenLogi Headset"
 
     def _on_battery(self, b: BatteryState) -> None:
         self.tray.setIcon(tray_icon(b, True))
-        text = tr("Battery: {p}%", p=b.percent) + (f" · {tr('Charging')}" if b.charging else "")
+        level = tr("Battery: {p}%", p=b.percent) if b.percent >= 0 else tr("Battery")
+        text = level + (f" · {tr('Charging')}" if b.charging else "")
         self.status_action.setText(text)
-        self.tray.setToolTip(f"PRO X Wireless — {text}")
+        self.tray.setToolTip(f"{self._model()} — {text}")
         app = self.ctl.config.app
         if self._was_full is False and b.full and app.notify_full_charge:
             self._notify(tr("Fully charged"), tr("Your headset is fully charged."))
         self._was_full = b.full
+        if b.percent < 0:
+            return  # unknown level: nothing to warn about
         if b.charging or b.percent > app.low_battery_percent + 3:
             self._warned_low = False
         elif app.notify_low_battery and not self._warned_low and b.percent <= app.low_battery_percent:

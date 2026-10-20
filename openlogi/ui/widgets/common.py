@@ -232,6 +232,8 @@ class BatteryIcon(QWidget):
         self.charging = False
 
     def set_state(self, percent: int | None, charging: bool) -> None:
+        if percent is not None and percent < 0:
+            percent = None  # level unknown (some headsets only say "charging")
         self.percent, self.charging = percent, charging
         self.update()
 

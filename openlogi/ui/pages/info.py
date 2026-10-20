@@ -101,7 +101,7 @@ class InfoPage(QWidget):
         self.power.hide()
         grid.addWidget(self.power, 2, 0)
 
-        feats = Card(tr("HID++ features"))
+        feats = self.feats = Card(tr("HID++ features"))
         self.fkv = KeyValueGrid()
         feats.body.addWidget(self.fkv)
         grid.addWidget(feats, 3, 0)
@@ -131,7 +131,7 @@ class InfoPage(QWidget):
             LinkState.NO_RECEIVER: tr("Receiver not found"),
             LinkState.NO_PERMISSION: tr("No permission") + (f" — {detail}" if detail else ""),
         }
-        self.kv.set(tr("LIGHTSPEED receiver"), names[state])
+        self.kv.set(tr("Link"), names[state])
 
     def _on_auto_off(self, minutes: int) -> None:
         i = self.auto_off.findData(minutes)
@@ -147,7 +147,10 @@ class InfoPage(QWidget):
         self.kv.set(tr("Model"), d.model)
         for kind, version in d.firmware:
             self.kv.set(f"{tr('Firmware')} ({kind})", version)
-        self.kv.set(tr("HID++ protocol"), d.protocol)
+        self.kv.set(tr("Protocol"), f"HID++ {d.protocol}" if d.backend == "hidpp" else d.protocol)
+        if d.backend != "hidpp":
+            self.kv.set(tr("Vendor"), d.vendor)
+        self.feats.setVisible(bool(d.features))
         self.kv.set(tr("USB ID"), d.usb_id)
         self.kv.set(tr("Device node"), d.hidraw)
         if d.eq_info:
@@ -159,8 +162,9 @@ class InfoPage(QWidget):
 
     def _on_battery(self, b: BatteryState) -> None:
         self.batt_icon.set_state(b.percent, b.charging)
-        self.batt_pct.setText(f"{b.percent}%")
+        self.batt_pct.setText(f"{b.percent}%" if b.percent >= 0 else "—")
         self.batt_state.setText(battery_detail(b) or tr("Discharging"))
-        self.bkv.set(tr("Battery voltage"), f"{b.millivolts} mV")
+        if b.millivolts:
+            self.bkv.set(tr("Battery voltage"), f"{b.millivolts} mV")
         color = theme.ACCENT if b.charging else theme.TEXT2
         self.batt_state.setStyleSheet(f"color: {color};")

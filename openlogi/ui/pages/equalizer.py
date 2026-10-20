@@ -89,7 +89,8 @@ class EqualizerPage(QWidget):
         titles = QVBoxLayout()
         titles.setSpacing(4)
         titles.addWidget(label(tr("Equalizer").upper(), "H2"))
-        titles.addWidget(label(tr("Onboard 10-band equalizer · stored in the headset"), "Faint"))
+        self.subtitle = label(tr("Onboard 10-band equalizer · stored in the headset"), "Faint")
+        titles.addWidget(self.subtitle)
         top.addLayout(titles)
         top.addStretch(1)
         self.preset_name = label("", "Value")
@@ -155,15 +156,18 @@ class EqualizerPage(QWidget):
         self.del_btn.setVisible(key.startswith("user:"))
         self.preset_name.setText(btn.text())
 
-    def _on_eq(self, gains: list[int], key: str, animate: bool = True) -> None:
+    def _on_eq(self, gains: list[float], key: str, animate: bool = True) -> None:
         self.graph.set_gains(gains, animate=animate)
         self._sync_selection(key)
 
     def _on_device(self, snap) -> None:
         self._on_state(self.ctl.bridge.state, "")
         if snap.eq_info:
-            self.graph.set_bands(snap.eq_info.frequencies, snap.eq_info.db_range)
+            self.graph.set_bands(snap.eq_info.frequencies, snap.eq_info.db_range, snap.eq_step)
             self.graph.set_gains(self.ctl.profile.eq_gains, animate=False)
+            n = snap.eq_info.band_count
+            where = tr("stored in the headset")
+            self.subtitle.setText(tr("Onboard {n}-band equalizer", n=n) + " · " + where)
 
     def _on_state(self, state: LinkState, _detail: str) -> None:
         # Editing stays possible offline: the profile is applied when the headset connects.

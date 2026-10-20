@@ -25,6 +25,10 @@ def _fmt_freq(hz: int) -> str:
     return f"{hz / 1000:g}k" if hz >= 1000 else str(hz)
 
 
+def _fmt_db(db: float) -> str:
+    return f"{db:+g} dB" if db else "0 dB"
+
+
 def _monotone_tangents(ys: list[float]) -> list[float]:
     """Fritsch–Carlson tangents: smooth curve without overshoot between bands."""
     n = len(ys)
@@ -56,7 +60,8 @@ class EqualizerGraph(QWidget):
         super().__init__(parent)
         self.freqs = tuple(frequencies)
         self.db_range = db_range
-        self.gains: list[int] = [0] * len(self.freqs)
+        self.step = 1.0  # smallest gain change the headset accepts
+        self.gains: list[float] = [0.0] * len(self.freqs)
         self._shown: list[float] = [0.0] * len(self.freqs)
         self._hover = -1
         self._drag = -1
@@ -74,18 +79,28 @@ class EqualizerGraph(QWidget):
         return QSize(760, 360)
 
     # -- public API ------------------------------------------------------------------
-    def set_bands(self, frequencies: tuple[int, ...], db_range: int) -> None:
-        if tuple(frequencies) == self.freqs and db_range == self.db_range:
+    def set_bands(self, frequencies: tuple[int, ...], db_range: int, step: float = 1.0) -> None:
+        if tuple(frequencies) == self.freqs and db_range == self.db_range and step == self.step:
             return
-        self.freqs, self.db_range = tuple(frequencies), db_range
-        self.gains = [0] * len(self.freqs)
+        self.freqs, self.db_range, self.step = tuple(frequencies), db_range, float(step) or 1.0
+        self.gains = [0.0] * len(self.freqs)
         self._shown = [0.0] * len(self.freqs)
         self.update()
 
-    def set_gains(self, gains: list[int], animate: bool = True) -> None:
+    def _snap(self, db: float) -> float:
+        db = max(-self.db_range, min(self.db_range, float(db)))
+        v = round(round(db / self.step) * self.step, 4)
+        return float(int(v)) if v == int(v) else v
+
+    @property
+    def _nudge(self) -> float:
+        """Wheel / arrow-key increment: the device step, but at least half a dB."""
+        return self.step if self.step >= 0.5 else round(0.5 / self.step) * self.step
+
+    def set_gains(self, gains: list[float], animate: bool = True) -> None:
         if self._drag >= 0 or len(gains) != len(self.freqs):
             return
-        gains = [int(g) for g in gains]
+        gains = [self._snap(g) for g in gains]
         if gains == self.gains and not self._anim.state() == QVariantAnimation.State.Running:
             return
         self.gains = gains
@@ -119,10 +134,9 @@ class EqualizerGraph(QWidget):
         r = self._plot()
         return r.center().y() - (db / self.db_range) * (r.height() / 2)
 
-    def _db_at(self, y: float) -> int:
+    def _db_at(self, y: float) -> float:
         r = self._plot()
-        db = (r.center().y() - y) / (r.height() / 2) * self.db_range
-        return int(round(max(-self.db_range, min(self.db_range, db))))
+        return self._snap((r.center().y() - y) / (r.height() / 2) * self.db_range)
 
     def _band_at(self, x: float) -> int:
         r = self._plot()
@@ -145,7 +159,7 @@ class EqualizerGraph(QWidget):
 
         # horizontal grid + dB labels
         step = 3 if self.db_range <= 12 else 6
-        for db in range(-self.db_range, self.db_range + 1, step):
+        for db in range(-(self.db_range // step) * step, self.db_range + 1, step):
             y = self._y(db)
             if db == 0:
                 p.setPen(QPen(QColor(theme.TEXT3), 1, Qt.PenStyle.DashLine))
@@ -233,7 +247,7 @@ class EqualizerGraph(QWidget):
         if idx >= 0 and enabled:
             g = self.gains[idx]
             c = QPointF(self._x(idx), self._y(self._shown[idx]))
-            txt = f"{g:+d} dB" if g else "0 dB"
+            txt = _fmt_db(g)
             bf = QFont(self.font())
             bf.setBold(True)
             bf.setPointSizeF(9)
@@ -249,8 +263,8 @@ class EqualizerGraph(QWidget):
             p.drawText(box, Qt.AlignmentFlag.AlignCenter, txt)
 
     # -- interaction -----------------------------------------------------------------------
-    def _set_band(self, i: int, db: int, live: bool = True) -> None:
-        db = max(-self.db_range, min(self.db_range, db))
+    def _set_band(self, i: int, db: float, live: bool = True) -> None:
+        db = self._snap(db)
         if self.gains[i] == db:
             return
         self._anim.stop()
@@ -301,7 +315,7 @@ class EqualizerGraph(QWidget):
         i = self._band_at(ev.position().x())
         if i < 0 or not self.isEnabled():
             return
-        delta = 1 if ev.angleDelta().y() > 0 else -1
+        delta = self._nudge if ev.angleDelta().y() > 0 else -self._nudge
         self._selected = i
         self._set_band(i, self.gains[i] + delta)
         self.gainsCommitted.emit(list(self.gains))
@@ -318,7 +332,8 @@ class EqualizerGraph(QWidget):
         elif k == Qt.Key.Key_Right:
             self._selected = min(len(self.freqs) - 1, self._selected + 1)
         elif k in (Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_PageUp, Qt.Key.Key_PageDown, Qt.Key.Key_0):
-            step = {Qt.Key.Key_Up: 1, Qt.Key.Key_Down: -1, Qt.Key.Key_PageUp: 3, Qt.Key.Key_PageDown: -3}
+            n = self._nudge
+            step = {Qt.Key.Key_Up: n, Qt.Key.Key_Down: -n, Qt.Key.Key_PageUp: 3 * n, Qt.Key.Key_PageDown: -3 * n}
             target = 0 if k == Qt.Key.Key_0 else self.gains[self._selected] + step[k]
             self._set_band(self._selected, target)
             self.gainsCommitted.emit(list(self.gains))

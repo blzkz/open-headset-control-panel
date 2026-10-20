@@ -50,6 +50,7 @@ def main() -> None:
                    f"{float(p['gain_min'])!r}, {float(p['gain_max'])!r}, {float(p['q_min'])!r}, "
                    f"{float(p['q_max'])!r}, {p['freq_min']}, {p['freq_max']}, {p['filter_types']})")
         presets = ", ".join(f"({p['name']!r}, {tuple(float(v) for v in p['values'])!r})" for p in d["presets"])
+        preset_count = len({c["arg"] for c in d["calls"] if c["call"] == "eq_preset"})
         lines += [
             f"    {d['name']!r}: dict(",
             f"        vendor={d['vendor']:#06x},",
@@ -58,6 +59,7 @@ def main() -> None:
             f"        eq={eq},",
             f"        peq={peq},",
             f"        presets=({presets}{',' if len(d['presets']) == 1 else ''}),",
+            f"        preset_count={preset_count},",
             "    ),",
         ]
     lines.append("}")

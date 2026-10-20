@@ -37,6 +37,8 @@ class HeadsetBridge(QObject, ServiceListener):
     equalizerChanged = pyqtSignal(list)
     cableChanged = pyqtSignal(bool)
     autoOffChanged = pyqtSignal(int)
+    controlChanged = pyqtSignal(str, object)
+    chatmixChanged = pyqtSignal(int, int, int)  # level 0-128, game %, chat %
     errorOccurred = pyqtSignal(str)
 
     def __init__(self, battery_interval: float, parent: QObject | None = None):
@@ -85,6 +87,12 @@ class HeadsetBridge(QObject, ServiceListener):
 
     def on_auto_off(self, minutes: int) -> None:
         self.autoOffChanged.emit(minutes)
+
+    def on_control(self, name: str, value: object) -> None:
+        self.controlChanged.emit(name, value)
+
+    def on_chatmix(self, level: int, game: int, chat: int) -> None:
+        self.chatmixChanged.emit(level, game, chat)
 
     def on_cable(self, connected: bool) -> None:
         self.cableChanged.emit(connected)

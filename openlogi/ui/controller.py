@@ -7,8 +7,8 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from ..audio.voice import apply_preset as apply_voice_preset
 from ..audio.voice import matches_preset as voice_matches_preset
 from ..config import Config, Profile
-from ..presets import PRESETS_BY_KEY, match_preset
-from ..service import LinkState
+from ..presets import PRESETS_BY_KEY, EqLayout, fit_gains, match_preset
+from ..service import ACTIONS, LinkState
 from .bridge import AudioManager, HeadsetBridge
 from .updates import UpdateManager
 from .i18n import tr
@@ -24,6 +24,7 @@ class Controller(QObject):
     settingsChanged = pyqtSignal()
     lightingChanged = pyqtSignal()
     autoOffChanged = pyqtSignal(int)
+    controlChanged = pyqtSignal(str, object)  # headset control name, value
 
     def __init__(self, config: Config, parent: QObject | None = None):
         super().__init__(parent)
@@ -38,6 +39,8 @@ class Controller(QObject):
         self.bridge.equalizerChanged.connect(self._device_eq)
         self.bridge.deviceChanged.connect(self._device_info)
         self.bridge.autoOffChanged.connect(self.autoOffChanged)
+        self.bridge.controlChanged.connect(self._device_control)
+        self.layout = EqLayout()
         self._push_desired()
 
     # -- lifecycle --------------------------------------------------------------------
@@ -69,7 +72,8 @@ class Controller(QObject):
         prof = self.profile
         if self.config.app.apply_on_connect:
             self.bridge.service.set_desired_state(prof.sidetone, prof.eq_gains,
-                                                  self.config.auto_off_minutes, self._lights_payload())
+                                                  self.config.auto_off_minutes, self._lights_payload(),
+                                                  prof.controls)
         else:
             self.bridge.service.set_desired_state(None, None)
 
@@ -84,6 +88,30 @@ class Controller(QObject):
             self.audio.set_usb_id(vid, pid)
         except ValueError:
             pass
+        if snap.eq_info:
+            info = snap.eq_info
+            layout = EqLayout(tuple(info.frequencies), -float(info.db_range), float(info.db_range), snap.eq_step)
+            if layout != self.layout:
+                self.layout = layout
+                self._fit_profiles()
+
+    def _fit_profiles(self) -> None:
+        """Express every profile's EQ in the connected headset's band layout."""
+        for prof in self.config.profiles.values():
+            gains = fit_gains(prof.eq_gains, self.layout, tuple(prof.eq_freqs))
+            if gains != prof.eq_gains or list(self.layout.freqs) != prof.eq_freqs:
+                prof.eq_gains, prof.eq_freqs = gains, list(self.layout.freqs)
+                prof.eq_preset = match_preset(gains, self.config.user_eq_presets, self.layout)
+        self._push_desired()
+        self.eqChanged.emit(list(self.profile.eq_gains), self.profile.eq_preset)
+        self.schedule_save()
+
+    def _device_control(self, name: str, value: object) -> None:
+        if name not in ACTIONS and self.profile.controls.get(name) != value:
+            self.profile.controls[name] = value
+            self._push_desired()
+            self.schedule_save()
+        self.controlChanged.emit(name, value)
 
     def _device_sidetone(self, level: int) -> None:
         if self.profile.sidetone != level:
@@ -92,11 +120,12 @@ class Controller(QObject):
             self.schedule_save()
         self.sidetoneChanged.emit(level)
 
-    def _device_eq(self, gains: list[int]) -> None:
+    def _device_eq(self, gains: list[float]) -> None:
         prof = self.profile
+        gains = [self.layout.snap(g) for g in gains]
         if prof.eq_gains != gains:
-            prof.eq_gains = list(gains)
-            prof.eq_preset = match_preset(gains, self.config.user_eq_presets)
+            prof.eq_gains = gains
+            prof.eq_preset = match_preset(gains, self.config.user_eq_presets, self.layout)
             self._push_desired()
             self.schedule_save()
         self.eqChanged.emit(list(prof.eq_gains), prof.eq_preset)
@@ -108,10 +137,11 @@ class Controller(QObject):
         self.bridge.service.set_sidetone(level)
         self.schedule_save()
 
-    def set_eq(self, gains: list[int], preset: str | None = None) -> None:
+    def set_eq(self, gains: list[float], preset: str | None = None) -> None:
         prof = self.profile
-        prof.eq_gains = [int(g) for g in gains]
-        prof.eq_preset = preset or match_preset(prof.eq_gains, self.config.user_eq_presets)
+        prof.eq_gains = fit_gains(gains, self.layout)
+        prof.eq_freqs = list(self.layout.freqs)
+        prof.eq_preset = preset or match_preset(prof.eq_gains, self.config.user_eq_presets, self.layout)
         self._push_desired()
         self.bridge.service.set_equalizer(prof.eq_gains)
         self.eqChanged.emit(list(prof.eq_gains), prof.eq_preset)
@@ -124,7 +154,7 @@ class Controller(QObject):
             preset = PRESETS_BY_KEY.get(key)
             gains = list(preset.gains) if preset else None
         if gains is not None:
-            self.set_eq(list(gains), key)
+            self.set_eq(fit_gains(gains, self.layout), key)
 
     def save_user_preset(self, name: str) -> None:
         self.config.user_eq_presets[name] = list(self.profile.eq_gains)
@@ -136,10 +166,18 @@ class Controller(QObject):
     def delete_user_preset(self, name: str) -> None:
         self.config.user_eq_presets.pop(name, None)
         if self.profile.eq_preset == f"user:{name}":
-            self.profile.eq_preset = match_preset(self.profile.eq_gains, self.config.user_eq_presets)
+            self.profile.eq_preset = match_preset(self.profile.eq_gains, self.config.user_eq_presets, self.layout)
         self.userPresetsChanged.emit()
         self.eqChanged.emit(list(self.profile.eq_gains), self.profile.eq_preset)
         self.schedule_save()
+
+    # -- headset controls (HeadsetControl-port devices) ----------------------------------------------
+    def set_control(self, name: str, value: object) -> None:
+        if name not in ACTIONS:
+            self.profile.controls[name] = value
+            self._push_desired()
+            self.schedule_save()
+        self.bridge.service.set_control(name, value)
 
     # -- device power / lighting ----------------------------------------------------------------
     def set_auto_off(self, minutes: int) -> None:
@@ -184,11 +222,18 @@ class Controller(QObject):
             return
         self.config.active_profile = name
         prof = self.profile
+        if prof.eq_freqs != list(self.layout.freqs):
+            prof.eq_gains = fit_gains(prof.eq_gains, self.layout, tuple(prof.eq_freqs))
+            prof.eq_freqs = list(self.layout.freqs)
         self._push_desired()
         if self.bridge.state is LinkState.CONNECTED:
             self.bridge.service.set_sidetone(prof.sidetone)
             self.bridge.service.set_equalizer(prof.eq_gains)
             self.bridge.service.set_lights(self._lights_payload())
+            dev = self.bridge.device
+            for name, value in prof.controls.items():
+                if dev is not None and name in dev.controls and name not in ACTIONS:
+                    self.bridge.service.set_control(name, value)
         self._apply_effects()
         self.profileChanged.emit()
         self.eqChanged.emit(list(prof.eq_gains), prof.eq_preset)

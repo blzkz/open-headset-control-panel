@@ -35,6 +35,11 @@ def _from_dict(cls, data: dict[str, Any] | None):
     return obj
 
 
+def _numbers(value: Any) -> bool:
+    return (isinstance(value, list) and 0 < len(value) <= 32
+            and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in value))
+
+
 @dataclass(slots=True)
 class VoiceSettings:
     """Software "Blue VO!CE"-style microphone chain (PipeWire filter-chain)."""
@@ -84,8 +89,10 @@ class LightingSettings:
 class Profile:
     name: str = "Default"
     eq_preset: str = "flat"
-    eq_gains: list[int] = field(default_factory=lambda: [0] * 10)
+    eq_gains: list[float] = field(default_factory=lambda: [0] * 10)  # in the band layout of eq_freqs
+    eq_freqs: list[int] = field(default_factory=lambda: [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000])
     sidetone: int = 0
+    controls: dict[str, Any] = field(default_factory=dict)  # headset controls (voice prompts, mic volume…)
     voice: VoiceSettings = field(default_factory=VoiceSettings)
     surround: SurroundSettings = field(default_factory=SurroundSettings)
     lighting: LightingSettings = field(default_factory=LightingSettings)
@@ -114,7 +121,7 @@ class Config:
     app: AppSettings = field(default_factory=AppSettings)
     active_profile: str = "Default"
     profiles: dict[str, Profile] = field(default_factory=lambda: {"Default": Profile()})
-    user_eq_presets: dict[str, list[int]] = field(default_factory=dict)
+    user_eq_presets: dict[str, list[float]] = field(default_factory=dict)
     auto_off_minutes: int | None = None  # None: leave the headset's own setting alone
 
     # -- profile helpers -------------------------------------------------------
@@ -162,16 +169,17 @@ class Config:
             for name, raw in profiles.items():
                 prof = _from_dict(Profile, raw)
                 prof.name = name
-                if len(prof.eq_gains) != 10:
-                    prof.eq_gains = [0] * 10
+                if not _numbers(prof.eq_gains) or not _numbers(prof.eq_freqs) or len(prof.eq_freqs) != len(
+                        prof.eq_gains):
+                    prof.eq_gains, prof.eq_freqs = [0] * 10, list(Profile().eq_freqs)
+                if not isinstance(prof.controls, dict):
+                    prof.controls = {}
                 cfg.profiles[name] = prof
         auto_off = data.get("auto_off_minutes")
         cfg.auto_off_minutes = int(auto_off) if isinstance(auto_off, (int, float)) else None
         presets = data.get("user_eq_presets")
         if isinstance(presets, dict):
-            cfg.user_eq_presets = {
-                str(k): [int(x) for x in v] for k, v in presets.items() if isinstance(v, list) and len(v) == 10
-            }
+            cfg.user_eq_presets = {str(k): list(v) for k, v in presets.items() if _numbers(v)}
         return cfg
 
     @classmethod

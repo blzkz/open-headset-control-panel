@@ -232,6 +232,7 @@ class GoldenDrivers(unittest.TestCase):
             self.assertEqual((p.bands, p.freq_min, p.freq_max, p.filter_types),
                              (dev["peq"]["bands"], dev["peq"]["freq_min"], dev["peq"]["freq_max"],
                               dev["peq"]["filter_types"]))
+        self.assertEqual(cls.PRESET_COUNT, len({c["arg"] for c in dev["calls"] if c["call"] == "eq_preset"}))
         presets = [(p["name"], [round(v, 4) for v in p["values"]]) for p in dev["presets"]]
         self.assertEqual([(n, [round(v, 4) for v in vals]) for n, vals in cls.EQ_PRESETS], presets)
 

@@ -27,6 +27,7 @@ from .icons import icon, size
 from .pages.equalizer import EqualizerPage
 from .pages.home import HomePage, battery_detail
 from .pages.info import InfoPage
+from .pages.controls import ControlsPage
 from .pages.lighting import LightingPage
 from .pages.microphone import MicrophonePage
 from .pages.settings import SettingsPage
@@ -148,9 +149,12 @@ class DevicePage(QWidget):
         ("info", "Device"),
         ("settings", "Settings"),  # pinned to the bottom of the rail
         ("light", "Lighting"),  # only for RGB models; shown right after Microphone
+        ("headset", "Headset"),  # extra controls of HeadsetControl-port models; after Lighting
     )
     SETTINGS = 4
     LIGHTING = 5
+    CONTROLS = 6
+    INSERTED_AT = {LIGHTING: 2, CONTROLS: 3}
 
     def __init__(self, ctl: Controller):
         super().__init__()
@@ -161,8 +165,9 @@ class DevicePage(QWidget):
 
         self.nav = NavRail()
         for i, (ic, tip) in enumerate(self.PAGES):
-            self.nav.add_item(ic, tr(tip), bottom=i == self.SETTINGS, position=2 if i == self.LIGHTING else -1)
+            self.nav.add_item(ic, tr(tip), bottom=i == self.SETTINGS, position=self.INSERTED_AT.get(i, -1))
         self.nav.set_item_visible(self.LIGHTING, False)
+        self.nav.set_item_visible(self.CONTROLS, False)
         root.addWidget(self.nav)
 
         main = QVBoxLayout()
@@ -202,6 +207,7 @@ class DevicePage(QWidget):
         self.stack.addWidget(InfoPage(ctl))
         self.stack.addWidget(SettingsPage(ctl))
         self.stack.addWidget(LightingPage(ctl))
+        self.stack.addWidget(ControlsPage(ctl))
         main.addWidget(self.stack, 1)
         root.addLayout(main, 1)
 
@@ -217,8 +223,11 @@ class DevicePage(QWidget):
     def _on_device(self, d) -> None:
         self.name.setText(d.model.upper())
         has_lights = bool(d.light_zones)
+        has_controls = bool(d.controls or d.has_chatmix or d.eq_presets)
         self.nav.set_item_visible(self.LIGHTING, has_lights)
-        if not has_lights and self.nav.current() == self.LIGHTING:
+        self.nav.set_item_visible(self.CONTROLS, has_controls)
+        if (not has_lights and self.nav.current() == self.LIGHTING) or (
+                not has_controls and self.nav.current() == self.CONTROLS):
             self.show_page(0)
 
     def show_page(self, index: int) -> None:
@@ -228,7 +237,7 @@ class DevicePage(QWidget):
 
     def _on_battery(self, b) -> None:
         self.batt_icon.set_state(b.percent, b.charging)
-        self.batt_pct.setText(f"{b.percent}%")
+        self.batt_pct.setText(f"{b.percent}%" if b.percent >= 0 else "—")
         self.batt_icon.setToolTip(battery_detail(b))
         self.status.setText(tr("Charging") if b.charging else "")
         self.status.setStyleSheet(f"color: {theme.ACCENT}; border: none;")

@@ -287,6 +287,7 @@ _G522_PRESET_BANDS = (
 @driver("Logitech G522 LIGHTSPEED")
 class LogitechG522Lightspeed(_Centurion):
     PREFIX = (0x50, 0x23)
+    EQ_FREQUENCIES = tuple(f for f, _g, _q in _G522_DEFAULT)
     EXACT_DIRECT_LENGTH = DETECT_CONNECTION_EVENTS = PROBE_OFFLINE_ON_TIMEOUT = LOOKUP_FEATURES_BY_ID = True
     SIDETONE_MAX = 9
     LIGHTS_ON = bytes((0x00, 0x00, 0x04, 0x00, 0xB8, 0xFC, 0xFF, 0x00, 0xAB, 0x64))
@@ -427,7 +428,7 @@ def onboard_eq_payload(slot: int, bands) -> bytes:
     return bytes(out)
 
 
-@driver("Logitech G PRO X 2 LIGHTSPEED")
+@driver("Logitech G PRO X 2 LIGHTSPEED", image="headset-pro-x-2.png")
 class LogitechGProX2Lightspeed(_Centurion):
     EXACT_DIRECT_LENGTH = DETECT_CONNECTION_EVENTS = PROBE_OFFLINE_ON_TIMEOUT = LOOKUP_FEATURES_BY_ID = True
     EQ_FROM_DEVICE = True

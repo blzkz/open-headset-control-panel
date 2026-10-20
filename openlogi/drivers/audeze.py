@@ -365,6 +365,7 @@ def read_eq_bands(settings: bytes) -> list[list[float]]:
 
 @driver("Audeze Maxwell")
 class AudezeMaxwell(_Maxwell):
+    EQ_FREQUENCIES = EQ_FREQUENCIES
     EQ_TIMEOUT_MS = 1500
     EQ_FRAGMENT_INTERVAL_MS = 20
 

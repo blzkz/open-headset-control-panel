@@ -225,9 +225,18 @@ class MultiModelTests(unittest.TestCase):
         from openlogi.permissions import RULE
 
         packaged = (Path(__file__).parent.parent / "packaging" / "70-openlogi-headset.rules").read_text()
+        self.assertEqual(packaged, RULE, "regenerate with: python3 -m openlogi.permissions")
         for pid in ALL_PIDS:
-            self.assertIn(f"{pid:04x}", packaged)
             self.assertIn(f"{pid:04x}", RULE)
+
+    def test_udev_rules_cover_every_driver(self) -> None:
+        from openlogi.drivers import REGISTRY
+        from openlogi.permissions import RULE
+
+        for cls in REGISTRY.drivers:
+            line = next(ln for ln in RULE.splitlines() if f'idVendor}}=="{cls.VENDOR:04x}"' in ln)
+            for pid in cls.PIDS:
+                self.assertIn(f"{pid:04x}", line, cls.NAME)
 
     def test_receiver_selection_prefers_vendor_collection(self) -> None:
         from unittest import mock

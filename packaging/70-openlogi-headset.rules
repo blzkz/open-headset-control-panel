@@ -1,3 +1,28 @@
-# OpenLogi Headset: let the logged-in user talk HID++ to supported Logitech headsets
-# (PRO X Wireless, PRO Wireless, PRO X 2 LIGHTSPEED (HID++), G633 / G635 / G933 / G935, G733 LIGHTSPEED, G533 Wireless, G535 LIGHTSPEED, G431 / G432 / G433).
-KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0a5b|0a5c|0a66|0a6d|0a87|0a89|0a9b|0a9c|0aa7|0aaa|0ab5|0aba|0abb|0ac4|0afb|0afc|0afe|0b1f", TAG+="uaccess"
+# OpenLogi Headset: let the logged-in user configure supported headsets over hidraw.
+# Generated from openlogi/models.py and openlogi/drivers (python3 -m openlogi.permissions).
+# HyperX (HP)
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="03f0", ATTRS{idProduct}=="018b|03cc|0696|089d|098d", TAG+="uaccess"
+# Logitech
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0a1f|0a5b|0a5c|0a66|0a6d|0a87|0a89|0a9b|0a9c|0aa7|0aaa|0aad|0ab5|0aba|0abb|0ac4|0ade|0af7|0afb|0afc|0afe|0b18|0b1c|0b1f", TAG+="uaccess"
+# Plantronics
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="047f", ATTRS{idProduct}=="02ee", TAG+="uaccess"
+# Sony
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ebf|0ec2", TAG+="uaccess"
+# HyperX (Kingston)
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0951", ATTRS{idProduct}=="16c4|1718|1723", TAG+="uaccess"
+# Jabra
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0b0e", ATTRS{idProduct}=="24c7|2519|2e57", TAG+="uaccess"
+# SteelSeries
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1252|1260|1280|1290|12ad|12b3|12b6|12c2|12d5|12d7|12e0|12e5|12ec|2202|2206|220a|220e|2212|2216|2232|2236|223a|2253|2258|2269|226d|227a|227e|2298|229e|22a1|22a4|22a5|22a7|22a9|22ad|230a", TAG+="uaccess"
+# Lenovo
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="17ef", ATTRS{idProduct}=="a07d", TAG+="uaccess"
+# Corsair
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1b1c", ATTRS{idProduct}=="0a14|0a16|0a17|0a1a|0a1d|0a2b|0a38|0a3d|0a3e|0a4f|0a51|0a52|0a55|0a56|0a62|0a64|0a75|0a97|1b1c|1b23|1b27|1b29|1b2a|2a02|2a08", TAG+="uaccess"
+# ROCCAT
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1e7d", ATTRS{idProduct}=="3a34|3a37", TAG+="uaccess"
+# Audeze
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3329", ATTRS{idProduct}=="4b18|4b19|4b28|4b29", TAG+="uaccess"
+# MCHOSE
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3837", ATTRS{idProduct}=="6045", TAG+="uaccess"
+# Logitech (ASTRO)
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="9886", ATTRS{idProduct}=="002c", TAG+="uaccess"

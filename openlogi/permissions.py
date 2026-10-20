@@ -10,11 +10,32 @@ from pathlib import Path
 from .models import ALL_PIDS
 
 RULE_NAME = "70-openlogi-headset.rules"
-RULE = (
-    "# OpenLogi Headset: let the logged-in user talk HID++ to supported Logitech headsets.\n"
-    'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", '
-    f'ATTRS{{idProduct}}=="{"|".join(f"{pid:04x}" for pid in ALL_PIDS)}", TAG+="uaccess"\n'
-)
+LOGITECH_VID = 0x046D
+
+
+def supported_ids() -> dict[int, list[int]]:
+    """USB vendor id -> product ids of every headset the app can drive."""
+    from .drivers import REGISTRY
+
+    ids: dict[int, set[int]] = {LOGITECH_VID: set(ALL_PIDS)}
+    for cls in REGISTRY.drivers:
+        ids.setdefault(cls.VENDOR, set()).update(cls.PIDS)
+    return {vid: sorted(pids) for vid, pids in sorted(ids.items())}
+
+
+def udev_rule() -> str:
+    from .drivers.session import VENDOR_NAMES
+
+    lines = ["# OpenLogi Headset: let the logged-in user configure supported headsets over hidraw.",
+             "# Generated from openlogi/models.py and openlogi/drivers (python3 -m openlogi.permissions)."]
+    for vid, pids in supported_ids().items():
+        lines.append(f"# {VENDOR_NAMES.get(vid, f'{vid:04x}')}")
+        lines.append(f'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{{idVendor}}=="{vid:04x}", '
+                     f'ATTRS{{idProduct}}=="{"|".join(f"{pid:04x}" for pid in pids)}", TAG+="uaccess"')
+    return "\n".join(lines) + "\n"
+
+
+RULE = udev_rule()
 
 
 def rule_installed() -> bool:
@@ -40,3 +61,9 @@ def install_rule() -> tuple[bool, str]:
     finally:
         Path(tmp).unlink(missing_ok=True)
     return res.returncode == 0, (res.stderr or res.stdout).strip()
+
+
+if __name__ == "__main__":
+    out = Path(__file__).resolve().parents[1] / "packaging" / RULE_NAME
+    out.write_text(RULE)
+    print(f"wrote {out}")

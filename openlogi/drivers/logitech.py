@@ -92,7 +92,7 @@ class _HidppFixed(Driver):
         return minutes
 
 
-@driver("Logitech G533")
+@driver("Logitech G533", image="headset-g533.png")
 class LogitechG533(_HidppFixed):
     CALIBRATION = CAL_G533
 
@@ -107,7 +107,7 @@ class LogitechG533(_HidppFixed):
         return self._inactive_time(h, minutes)
 
 
-@driver("Logitech G535")
+@driver("Logitech G535", image="headset-g535.png")
 class LogitechG535(_HidppFixed):
     CALIBRATION = CAL_G535
 
@@ -129,7 +129,7 @@ class LogitechG535(_HidppFixed):
         return validated
 
 
-@driver("Logitech G633/G635/G733/G933/G935")
+@driver("Logitech G633/G635/G733/G933/G935", image="headset-g935.png")
 class LogitechG633Family(_HidppFixed):
     CALIBRATION = CAL_G633
 
@@ -150,14 +150,14 @@ class LogitechG633Family(_HidppFixed):
         return on
 
 
-@driver("Logitech G431/G432/G433")
+@driver("Logitech G431/G432/G433", image="headset-g432.png")
 class LogitechG432(_HidppFixed):
     def set_sidetone(self, h: Handle, level: int) -> Sidetone:
         self._feature(h, 0x05, 0x1E, u8(map_int(level, 0, 128, 0, 100)))
         return Sidetone(level)
 
 
-@driver("Logitech G PRO Series")
+@driver("Logitech G PRO Series", image="headset-front.png")
 class LogitechGPro(_HidppFixed):
     CALIBRATION = CAL_GPRO
 

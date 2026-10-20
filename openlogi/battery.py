@@ -53,20 +53,21 @@ def percent_from_millivolts(mv: float, charging: bool = False, curve: Curve = DI
 
 @dataclass(frozen=True, slots=True)
 class BatteryState:
-    percent: int
+    percent: int  # -1 when the headset only reports "charging"
     millivolts: int
     charging: bool
     full: bool
+    estimates: bool = True  # runtime figures are calibrated for this model
 
     @property
     def remaining_hours(self) -> float | None:
-        if self.charging:
+        if self.charging or not self.estimates or self.percent < 0:
             return None
         return FULL_HOURS * self.percent / 100.0
 
     @property
     def hours_to_full(self) -> float | None:
-        if not self.charging or self.full:
+        if not self.charging or self.full or not self.estimates or self.percent < 0:
             return None
         return CHARGE_HOURS * (100 - self.percent) / 100.0
 

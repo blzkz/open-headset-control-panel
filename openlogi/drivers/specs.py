@@ -12,6 +12,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(5, 0, 1.0, -7, 7),
         peq=ParametricEqInfo(5, 0.0, 1.0, -7.0, 7.0, 0.333333, 10.01467, 80, 15000, 21),
         presets=(),
+        preset_count=3,
     ),
     'Logitech ASTRO A50 Gen 5': dict(
         vendor=0x046d,
@@ -20,6 +21,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=ParametricEqInfo(10, 0.0, 0.05, -6.0, 6.0, 0.031, 7.969, 20, 20000, 4),
         presets=(),
+        preset_count=0,
     ),
     'Logitech G522 LIGHTSPEED': dict(
         vendor=0x046d,
@@ -28,6 +30,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(10, 0, 0.05, -6, 6),
         peq=ParametricEqInfo(10, 0.0, 0.05, -6.0, 6.0, 0.03125, 7.96875, 20, 20000, 4),
         presets=(('Default', (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)), ('Bass Boost', (3.0, 2.5, 1.75, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)), ('Gaming', (0.0, 0.0, 0.5, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.75)), ('Gaming - FPS', (0.0, 0.0, 0.0, -1.0, -1.0, 3.75, 4.5, 1.75, 1.5, 1.5)), ('Media', (4.0, 3.0, 2.0, -0.5, -0.5, 1.0, 2.0, 1.5, 0.5, -0.5))),
+        preset_count=5,
     ),
     'Logitech G533': dict(
         vendor=0x046d,
@@ -36,6 +39,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Logitech G535': dict(
         vendor=0x046d,
@@ -44,6 +48,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Logitech G633/G635/G733/G933/G935': dict(
         vendor=0x046d,
@@ -52,6 +57,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Logitech G431/G432/G433': dict(
         vendor=0x046d,
@@ -60,6 +66,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Logitech G930': dict(
         vendor=0x046d,
@@ -68,6 +75,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Logitech G PRO X 2 LIGHTSPEED': dict(
         vendor=0x046d,
@@ -76,6 +84,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(('Flat', (0.0, 0.0, 0.0, 0.0, 0.0)), ('Bass Boost', (4.0, 2.0, 0.0, 0.0, 0.0)), ('Team Chat', (-1.0, 2.0, 1.0, 3.0, 3.0)), ('Shooter', (-1.0, -1.0, 4.0, 3.0, 2.0)), ('MOBA', (0.0, 1.0, 1.0, 2.0, 4.0))),
+        preset_count=5,
     ),
     'Logitech G PRO Series': dict(
         vendor=0x046d,
@@ -84,6 +93,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Logitech Zone Wired/Zone 750': dict(
         vendor=0x046d,
@@ -92,6 +102,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Corsair Headset Device': dict(
         vendor=0x1b1c,
@@ -100,6 +111,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Corsair Wireless V2 Headset Device': dict(
         vendor=0x1b1c,
@@ -108,6 +120,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Corsair Virtuoso XT/SE': dict(
         vendor=0x1b1c,
@@ -116,6 +129,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'SteelSeries Arctis (1/7X/7P) Wireless': dict(
         vendor=0x1038,
@@ -124,6 +138,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'SteelSeries Arctis (7/Pro)': dict(
         vendor=0x1038,
@@ -132,6 +147,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'SteelSeries Arctis 9': dict(
         vendor=0x1038,
@@ -140,6 +156,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'SteelSeries Arctis Pro Wireless': dict(
         vendor=0x1038,
@@ -148,6 +165,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'SteelSeries Arctis Nova 3': dict(
         vendor=0x1038,
@@ -156,6 +174,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(6, 0, 0.5, -6, 6),
         peq=None,
         presets=(('Flat', (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)), ('Bass', (4.0, 2.5, -1.5, 0.0, 0.0, 0.0)), ('Smiley', (3.0, 1.5, -2.5, -1.0, 1.5, 3.0)), ('Focus', (-4.0, -3.5, -1.5, 2.0, 4.0, 0.0))),
+        preset_count=4,
     ),
     'SteelSeries Arctis Nova (5/5X)': dict(
         vendor=0x1038,
@@ -164,6 +183,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(10, 0, 0.5, -10, 10),
         peq=ParametricEqInfo(10, 20.0, 0.5, -10.0, 10.0, 0.2, 10.0, 20, 20000, 31),
         presets=(('Flat', (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)), ('Bass', (3.5, 5.5, 4.0, 1.0, -1.5, -1.5, -1.0, -1.0, -1.0, -1.0)), ('Focus', (-5.0, -3.5, -1.0, -3.5, -2.5, 4.0, 6.0, -3.5, 0.0, 0.0)), ('Smiley', (3.0, 3.5, 1.5, -1.5, -4.0, -4.0, -2.5, 1.5, 3.0, 4.0))),
+        preset_count=4,
     ),
     'SteelSeries Arctis Nova 7': dict(
         vendor=0x1038,
@@ -172,6 +192,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(10, 0, 0.5, -10, 10),
         peq=None,
         presets=(('Flat', (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)), ('Bass', (3.5, 5.5, 4.0, 1.0, -1.5, -1.5, -1.0, -1.0, -1.0, -1.0)), ('Focus', (-5.0, -3.5, -1.0, -3.5, -2.5, 4.0, 6.0, -3.5, 0.0, 0.0)), ('Smiley', (3.0, 3.5, 1.5, -1.5, -4.0, -4.0, -2.5, 1.5, 3.0, 4.0))),
+        preset_count=4,
     ),
     'SteelSeries Arctis Nova 7P': dict(
         vendor=0x1038,
@@ -180,6 +201,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(10, 0, 0.5, -10, 10),
         peq=None,
         presets=(('Flat', (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)), ('Bass', (3.5, 5.5, 4.0, 1.0, -1.5, -1.5, -1.0, -1.0, -1.0, -1.0)), ('Focus', (-5.0, -3.5, -1.0, -3.5, -2.5, 4.0, 6.0, -3.5, 0.0, 0.0)), ('Smiley', (3.0, 3.5, 1.5, -1.5, -4.0, -4.0, -2.5, 1.5, 3.0, 4.0))),
+        preset_count=4,
     ),
     'SteelSeries Arctis 7+': dict(
         vendor=0x1038,
@@ -188,6 +210,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(10, 0, 0.5, -12, 12),
         peq=None,
         presets=(('Flat', (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)), ('Bass Boost', (3.5, 4.0, 1.0, -1.5, -1.5, -1.0, -1.0, -1.0, -1.0, 5.5)), ('Smiley', (3.0, 1.5, -1.5, -4.0, -4.0, -2.5, 1.5, 3.0, 4.0, 3.5)), ('Focus', (-5.0, -1.0, -3.5, -2.5, 4.0, 6.0, 3.5, -3.5, 0.0, -3.5))),
+        preset_count=4,
     ),
     'SteelSeries Arctis Nova Pro Wireless': dict(
         vendor=0x1038,
@@ -196,6 +219,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(10, 0, 0.5, -10, 10),
         peq=None,
         presets=(),
+        preset_count=4,
     ),
     'SteelSeries Arctis Nova 3P Wireless': dict(
         vendor=0x1038,
@@ -204,6 +228,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(10, 0, 0.1, -12, 12),
         peq=ParametricEqInfo(10, 0.0, 0.1, -12.0, 12.0, 0.2, 10.0, 20, 20000, 63),
         presets=(('Flat', (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)), ('Bass', (3.5, 5.5, 4.0, 1.0, -1.5, -1.5, -1.0, -1.0, -1.0, -1.0)), ('Focus', (-5.0, -3.5, -1.0, -3.5, -2.5, 4.0, 6.0, -3.5, 0.0, 0.0)), ('Smiley', (3.0, 3.5, 1.5, -1.5, -4.0, -4.0, -2.5, 1.5, 3.0, 4.0))),
+        preset_count=4,
     ),
     'SteelSeries Arctis GameBuds': dict(
         vendor=0x1038,
@@ -212,6 +237,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'HyperX Cloud Alpha Wireless': dict(
         vendor=0x03f0,
@@ -220,6 +246,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'HyperX Cloud Flight Wireless': dict(
         vendor=0x0951,
@@ -228,6 +255,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'HyperX Cloud II Wireless': dict(
         vendor=0x03f0,
@@ -236,6 +264,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'HyperX Cloud II Wireless (Kingston)': dict(
         vendor=0x0951,
@@ -244,6 +273,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'HyperX Cloud 3': dict(
         vendor=0x03f0,
@@ -252,6 +282,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'ROCCAT Elo 7.1 Air': dict(
         vendor=0x1e7d,
@@ -260,6 +291,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'ROCCAT Elo 7.1 USB': dict(
         vendor=0x1e7d,
@@ -268,6 +300,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Audeze Maxwell': dict(
         vendor=0x3329,
@@ -276,6 +309,7 @@ SPECS: dict[str, dict] = {
         eq=EqInfo(10, 0, 1.0, -12, 12),
         peq=None,
         presets=(),
+        preset_count=10,
     ),
     'Audeze Maxwell 2': dict(
         vendor=0x3329,
@@ -284,6 +318,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=10,
     ),
     'Lenovo Wireless VoIP Headset': dict(
         vendor=0x17ef,
@@ -292,6 +327,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(('Music', ()), ('Movie', ()), ('Game', ()), ('Voice', ())),
+        preset_count=4,
     ),
     'Plantronics Voyager 8200 UC (BT600)': dict(
         vendor=0x047f,
@@ -300,6 +336,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Jabra Link 380 (paired headset)': dict(
         vendor=0x0b0e,
@@ -308,6 +345,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Jabra Link 390 (paired headset)': dict(
         vendor=0x0b0e,
@@ -316,6 +354,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Jabra Evolve2 65 Flex (USB)': dict(
         vendor=0x0b0e,
@@ -324,6 +363,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Sony INZONE Buds': dict(
         vendor=0x054c,
@@ -332,6 +372,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'Sony INZONE H5': dict(
         vendor=0x054c,
@@ -340,6 +381,7 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
     'MCHOSE X9 Wireless': dict(
         vendor=0x3837,
@@ -348,5 +390,6 @@ SPECS: dict[str, dict] = {
         eq=None,
         peq=None,
         presets=(),
+        preset_count=0,
     ),
 }
