@@ -11,11 +11,21 @@ WORK="build/appimage"
 CACHE="${APPIMAGE_CACHE:-build/cache}"
 mkdir -p "$WORK" "$CACHE" dist
 
-py_url="$(curl -sfL "https://api.github.com/repos/niess/python-appimage/releases/tags/python$PYVER" \
-    | grep -o "https://[^\"]*manylinux_2_28_$ARCH.AppImage" | head -n1)"
+# Authenticated when a token is around (CI): anonymous API calls from shared runners get rate-limited.
+auth=()
+[ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
+fetch() { curl -sfL --retry 4 --retry-delay 5 --retry-all-errors "$@"; }
 tool_url="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage"
-[ -f "$CACHE/python.AppImage" ] || curl -sfL -o "$CACHE/python.AppImage" "$py_url"
-[ -f "$CACHE/appimagetool.AppImage" ] || curl -sfL -o "$CACHE/appimagetool.AppImage" "$tool_url"
+if [ ! -f "$CACHE/python.AppImage" ]; then
+    py_url="$(fetch "${auth[@]}" "https://api.github.com/repos/niess/python-appimage/releases/tags/python$PYVER" \
+        | grep -o "https://[^\"]*manylinux_2_28_$ARCH.AppImage" | head -n1)" || true
+    if [ -z "$py_url" ]; then
+        echo "error: could not find the python$PYVER manylinux_2_28 AppImage in niess/python-appimage" >&2
+        exit 1
+    fi
+    fetch -o "$CACHE/python.AppImage" "$py_url"
+fi
+[ -f "$CACHE/appimagetool.AppImage" ] || fetch -o "$CACHE/appimagetool.AppImage" "$tool_url"
 chmod +x "$CACHE/python.AppImage" "$CACHE/appimagetool.AppImage"
 
 rm -rf -- "${WORK:?}/AppDir" "${WORK:?}/squashfs-root"
