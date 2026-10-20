@@ -1,7 +1,7 @@
 # OpenLogi Headset
 
-Panel de control para **auriculares Logitech HID++** (PRO X Wireless, G733, G935, G535…) en Linux, con un aspecto muy cercano a **Logitech G HUB**.
-Habla HID++ 2.0 directamente con el auricular a través de `/dev/hidraw` (sin hidapi, sin código compilado) y se integra con PipeWire para las funciones de audio que en Windows hace G HUB por software.
+Panel de control para **auriculares gaming en Linux**, con un aspecto muy cercano a **Logitech G HUB**: auriculares **Logitech HID++** (PRO X Wireless, G733, G935, G535…) y **más de 40 modelos de SteelSeries, HyperX, Corsair, Audeze, Logitech/ASTRO, Sony, Jabra, ROCCAT, Lenovo, Plantronics y MCHOSE** gracias a una adaptación de los controladores de [HeadsetControl](https://github.com/Sapd/HeadsetControl).
+Habla directamente con el auricular a través de `/dev/hidraw` (sin hidapi, sin código compilado) y se integra con PipeWire para las funciones de audio que en Windows hace G HUB por software.
 
 **🌐 Versión web (sin instalar nada): <https://blzkz.github.io/openLogiHeadsetControlPanel/>**. Funciona con WebHID en Chrome, Edge, Brave u Opera, en Linux, Windows y macOS.
 
@@ -28,6 +28,58 @@ Habla HID++ 2.0 directamente con el auricular a través de `/dev/hidraw` (sin hi
 
 Las funciones no se suponen por modelo: la app **pregunta a cada auricular qué features HID++ tiene** y solo muestra (y solo escribe en) las que existen. Los modelos experimentales vienen de la ingeniería inversa de la comunidad ([HeadsetControl](https://github.com/Sapd/HeadsetControl), g933-utils) y aún no se han probado con el hardware real. Si tienes uno, `openlogi-headsetctl --diagnose` genera un informe de solo lectura para adjuntarlo en una incidencia.
 
+### Otras marcas y modelos (controladores de HeadsetControl)
+
+Estos modelos usan una **adaptación a Python de los controladores de HeadsetControl**, comprobada **byte a byte** contra el código C++ original: se compila HeadsetControl con una interfaz HID que graba cada paquete, y los tests exigen que la versión Python escriba exactamente los mismos bytes y entienda las respuestas igual. En los protocolos con negociación (Logitech Centurion, ASTRO A50, Audeze) también se simulan respuestas de un auricular conectado para recorrer el protocolo completo ([`tools/golden`](tools/golden/README.md)). Aún no se han probado con OpenLogi en hardware real: aparecen como *soporte experimental*. Su página **Auriculares** muestra solo lo que tenga cada modelo.
+
+<!-- devices:start -->
+| Modelo | Marca | IDs USB | Funciones |
+|---|---|---|---|
+| Audeze Maxwell | Audeze | `3329:4b19`, `3329:4b18` | batería, sidetone, EQ, presets, chat mix, apagado auto., avisos de voz, limitador, filtro de ruido |
+| Audeze Maxwell 2 | Audeze | `3329:4b29`, `3329:4b28` | batería, sidetone, presets, chat mix, apagado auto., avisos de voz, filtro de ruido |
+| Corsair Headset Device | Corsair | `1b1c:1b1c`, `1b1c:1b27`, `1b1c:0a14`, `1b1c:0a16` … | batería, sidetone, luces, sonidos |
+| Corsair Virtuoso XT/SE | Corsair | `1b1c:0a64`, `1b1c:0a62`, `1b1c:0a3e`, `1b1c:0a3d` | batería |
+| Corsair Wireless V2 Headset Device | Corsair | `1b1c:2a08`, `1b1c:2a02`, `1b1c:0a97` | batería, sidetone, apagado auto. |
+| HyperX Cloud 3 | HyperX (HP) | `03f0:089d`, `03f0:03cc` | sidetone |
+| HyperX Cloud Alpha Wireless | HyperX (HP) | `03f0:098d` | batería, sidetone, apagado auto., avisos de voz |
+| HyperX Cloud II Wireless | HyperX (HP) | `03f0:0696`, `03f0:018b` | batería, apagado auto. |
+| HyperX Cloud Flight Wireless | HyperX (Kingston) | `0951:16c4`, `0951:1723` | batería |
+| HyperX Cloud II Wireless (Kingston) | HyperX (Kingston) | `0951:1718` | batería, sidetone, apagado auto. |
+| Jabra Evolve2 65 Flex (USB) | Jabra | `0b0e:2519` | batería, sidetone, apagado auto., luces, avisos de voz, limitador |
+| Jabra Link 380 (paired headset) | Jabra | `0b0e:24c7` | batería, sidetone, apagado auto., luces, avisos de voz, limitador |
+| Jabra Link 390 (paired headset) | Jabra | `0b0e:2e57` | batería, sidetone, apagado auto., luces, avisos de voz, limitador |
+| Lenovo Wireless VoIP Headset | Lenovo | `17ef:a07d` | batería, sidetone, presets, apagado auto., avisos de voz, girar para silenciar, LED de silencio, limitador |
+| Logitech ASTRO A50 Gen 5 | Logitech | `046d:0b1c` | batería, sidetone, EQ paramétrico, chat mix, luces, filtro de ruido |
+| Logitech G PRO Series | Logitech | `046d:0aa7`, `046d:0aaa`, `046d:0aba`, `046d:0afb` … | batería, sidetone, apagado auto. |
+| Logitech G PRO X 2 LIGHTSPEED | Logitech | `046d:0af7` | batería, sidetone, EQ, EQ paramétrico, presets, apagado auto. |
+| Logitech G431/G432/G433 | Logitech | `046d:0a9b`, `046d:0a9c`, `046d:0a6d` | sidetone |
+| Logitech G522 LIGHTSPEED | Logitech | `046d:0b18` | batería, sidetone, EQ, EQ paramétrico, presets, apagado auto., luces, avisos de voz, LED de silencio |
+| Logitech G533 | Logitech | `046d:0a66` | batería, sidetone, apagado auto. |
+| Logitech G535 | Logitech | `046d:0ac4` | batería, sidetone, apagado auto. |
+| Logitech G633/G635/G733/G933/G935 | Logitech | `046d:0a5c`, `046d:0a89`, `046d:0a5b`, `046d:0a87` … | batería, sidetone, luces |
+| Logitech G930 | Logitech | `046d:0a1f` | batería, sidetone |
+| Logitech Zone Wired/Zone 750 | Logitech | `046d:0aad`, `046d:0ade` | sidetone, avisos de voz, girar para silenciar |
+| Logitech ASTRO A50 Gen 4 | Logitech (ASTRO) | `9886:002c` | batería, sidetone, EQ, EQ paramétrico, presets, chat mix, vol. micro, filtro de ruido |
+| MCHOSE X9 Wireless | MCHOSE | `3837:6045` | batería |
+| Plantronics Voyager 8200 UC (BT600) | Plantronics | `047f:02ee` | batería, sidetone, luces, avisos de voz, limitador |
+| ROCCAT Elo 7.1 Air | ROCCAT | `1e7d:3a37` | apagado auto., luces |
+| ROCCAT Elo 7.1 USB | ROCCAT | `1e7d:3a34` | luces |
+| Sony INZONE Buds | Sony | `054c:0ec2` | batería |
+| Sony INZONE H5 | Sony | `054c:0ebf` | batería, sidetone, chat mix, vol. micro |
+| SteelSeries Arctis (1/7X/7P) Wireless | SteelSeries | `1038:12b3`, `1038:12b6`, `1038:12d7`, `1038:12d5` | batería, sidetone, apagado auto. |
+| SteelSeries Arctis (7/Pro) | SteelSeries | `1038:1260`, `1038:12ad`, `1038:1252`, `1038:1280` | batería, sidetone, chat mix, apagado auto., luces |
+| SteelSeries Arctis 7+ | SteelSeries | `1038:220e`, `1038:2212`, `1038:2216`, `1038:2236` | batería, sidetone, EQ, presets, chat mix, apagado auto. |
+| SteelSeries Arctis 9 | SteelSeries | `1038:12c2` | batería, sidetone, chat mix, apagado auto. |
+| SteelSeries Arctis GameBuds | SteelSeries | `1038:230a` | batería |
+| SteelSeries Arctis Nova (5/5X) | SteelSeries | `1038:2232`, `1038:2253` | batería, sidetone, EQ, EQ paramétrico, presets, chat mix, apagado auto., vol. micro, LED de silencio, limitador |
+| SteelSeries Arctis Nova 3 | SteelSeries | `1038:12ec` | sidetone, EQ, presets, vol. micro, LED de silencio |
+| SteelSeries Arctis Nova 3P Wireless | SteelSeries | `1038:2269`, `1038:226d` | batería, sidetone, EQ, EQ paramétrico, presets, apagado auto., vol. micro |
+| SteelSeries Arctis Nova 7 | SteelSeries | `1038:2202`, `1038:22a1`, `1038:227e`, `1038:2206` … | batería, sidetone, EQ, presets, chat mix, apagado auto., vol. micro, LED de silencio, limitador, BT al encender, llamadas BT |
+| SteelSeries Arctis Nova 7P | SteelSeries | `1038:220a`, `1038:22a7`, `1038:2298` | batería, EQ, presets, apagado auto., vol. micro, LED de silencio, limitador, BT al encender, llamadas BT |
+| SteelSeries Arctis Nova Pro Wireless | SteelSeries | `1038:12e0`, `1038:12e5` | batería, sidetone, EQ, presets, apagado auto., luces |
+| SteelSeries Arctis Pro Wireless | SteelSeries | `1038:1290` | batería, sidetone, apagado auto. |
+<!-- devices:end -->
+
 ## Funciones
 
 ### Hardware (HID++ 2.0, en el propio auricular)
@@ -43,6 +95,9 @@ Las funciones no se suponen por modelo: la app **pregunta a cada auricular qué 
 | **Cable de carga USB** | — | Detecta el auricular enchufado por USB (`046d:0abb`). |
 
 En el PRO X Wireless estas son **todas** las funciones que expone el firmware de la primera versión (la app enumera el árbol de features en cada conexión; ver la pestaña *Dispositivo*). HeadsetControl, por ejemplo, intenta configurar el "inactive time" en el índice 7, que este firmware no tiene; en realidad está en las funciones 1/2 de la feature `0x1F20`.
+
+### Hardware en otros modelos (controladores de HeadsetControl)
+Batería, sidetone, ecualizador (con los pasos y el rango de cada modelo; los preajustes se adaptan a sus bandas), apagado automático y, según el modelo: **presets guardados en el auricular, mezcla juego/chat, volumen del micro, filtro de ruido, LED de silencio, girar para silenciar, avisos de voz, luces, limitador de volumen, Bluetooth al encender, volumen de llamadas Bluetooth y sonidos de notificación**. El perfil activo guarda estos ajustes y los vuelve a aplicar al conectar.
 
 ### Software (equivalentes a G HUB sobre PipeWire)
 - **Mejora de voz** (estilo *Blue VO!CE*): crea un micrófono virtual con reducción de ruido WebRTC, filtro paso alto, puerta de ruido, graves/presencia/de-esser/brillo y ganancia. 5 preajustes. Los cambios de parámetros se aplican **en vivo** (`pw-cli set-param`) sin cortar la grabación de Discord/OBS.
@@ -120,6 +175,10 @@ openlogi-headsetctl --list-presets
 openlogi-headsetctl -a 30                   # apagado automático a los 30 min (0 = nunca)
 openlogi-headsetctl -l breathing --color ff2d55 --brightness 80   # iluminación (modelos RGB)
 openlogi-headsetctl --list-devices          # modelos compatibles
+openlogi-headsetctl --chatmix               # mezcla juego/chat (modelos con rueda)
+openlogi-headsetctl --voice-prompts off --volume-limiter on   # opciones según el modelo
+openlogi-headsetctl --mic-volume 96 --noise-filter 1
+openlogi-headsetctl --device-preset 2       # preset guardado en el auricular
 openlogi-headsetctl --diagnose > informe.json   # informe de solo lectura para incidencias
 openlogi-headsetctl -i --json
 ```
@@ -133,6 +192,8 @@ openlogi/
 ├── hidpp/            Protocolo HID++ 2.0 puro (transporte hidraw, mensajes, errores, features tipadas)
 ├── models.py         Registro de modelos (IDs, imagen, curva de batería, zonas de luz); también alimenta la web
 ├── device.py         Descubrimiento del receptor y modelo de alto nivel del auricular
+├── drivers/          Controladores adaptados de HeadsetControl (SteelSeries, HyperX, Corsair, Audeze…),
+│                     E/S hidraw al estilo hidapi y selección de interfaz por capacidad
 ├── service.py        Hilo de fondo: reconexión, keepalive, eventos, escrituras coalescidas (latest-wins)
 ├── battery.py        Curva de descarga Li-ion + suavizado
 ├── audio/            PipeWire: pactl, cadena de voz, 7.1 virtual (procesos `pipewire -c` aislados)
@@ -165,7 +226,9 @@ Interfaz 3 del receptor, página de uso `0xFF43`, solo informes HID++ largos (`0
 
 ## Limitaciones conocidas
 - El porcentaje de batería es una **estimación** a partir de la tensión (el firmware no da %); durante la carga se compensa la sobretensión.
-- El firmware no expone apagado automático ni el estado del botón de mute del micro.
+- El firmware del PRO X no expone el estado del botón de mute del micro.
+- Los modelos de otras marcas se sondean (batería, mezcla juego/chat) en lugar de recibir eventos.
+- La versión web (WebHID) solo cubre los modelos Logitech HID++.
 - Con PipeWire < 1.4 (p. ej. Ubuntu 24.04) la puerta de ruido de la mejora de voz se omite automáticamente porque ese PipeWire no tiene el filtro `noisegate`. El resto de la cadena funciona igual.
 - Probado con la primera versión (receptor `0aba`). Los IDs `0aaa` y el PRO Wireless `0aa7` están incluidos porque usan la misma familia de protocolo, pero no se han probado.
 

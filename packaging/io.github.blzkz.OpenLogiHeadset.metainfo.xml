@@ -4,13 +4,19 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>OpenLogi Headset</name>
-  <summary>G HUB-style control panel for Logitech gaming headsets</summary>
-  <summary xml:lang="es">Panel de control estilo G HUB para auriculares Logitech PRO X Wireless</summary>
+  <summary>G HUB-style control panel for gaming headsets</summary>
+  <summary xml:lang="es">Panel de control estilo G HUB para auriculares gaming</summary>
   <description>
-    <p>Configure the Logitech G PRO X Wireless LIGHTSPEED headset on Linux: 10-band onboard equalizer,
-    sidetone, battery status, voice enhancement and virtual 7.1 surround through PipeWire, profiles and a tray icon.</p>
-    <p xml:lang="es">Configura los auriculares Logitech G PRO X Wireless LIGHTSPEED en Linux: ecualizador integrado
-    de 10 bandas, sidetone, batería, mejora de voz y sonido envolvente 7.1 virtual con PipeWire, perfiles e icono en la bandeja.</p>
+    <p>Configure gaming headsets on Linux with a G HUB-like interface: Logitech HID++ headsets (PRO X Wireless,
+    G733, G935, G535…) and more than 40 SteelSeries, HyperX, Corsair, Audeze, Logitech/ASTRO, Sony, Jabra, ROCCAT,
+    Lenovo, Plantronics and MCHOSE models through ports of the HeadsetControl drivers. Onboard equalizer, sidetone,
+    battery status, chat mix, microphone and power options, voice enhancement and virtual 7.1 surround through
+    PipeWire, profiles and a tray icon.</p>
+    <p xml:lang="es">Configura auriculares gaming en Linux con una interfaz al estilo de G HUB: auriculares Logitech
+    HID++ (PRO X Wireless, G733, G935, G535…) y más de 40 modelos de SteelSeries, HyperX, Corsair, Audeze,
+    Logitech/ASTRO, Sony, Jabra, ROCCAT, Lenovo, Plantronics y MCHOSE mediante adaptaciones de los controladores de
+    HeadsetControl. Ecualizador integrado, sidetone, batería, mezcla juego/chat, opciones de micrófono y energía,
+    mejora de voz y sonido envolvente 7.1 virtual con PipeWire, perfiles e icono en la bandeja.</p>
   </description>
   <launchable type="desktop-id">openlogi-headset.desktop</launchable>
   <url type="homepage">https://github.com/blzkz/openLogiHeadsetControlPanel</url>
@@ -27,6 +33,12 @@
     </screenshot>
   </screenshots>
   <provides>
+    <modalias>usb:v03F0p018B*</modalias>
+    <modalias>usb:v03F0p03CC*</modalias>
+    <modalias>usb:v03F0p0696*</modalias>
+    <modalias>usb:v03F0p089D*</modalias>
+    <modalias>usb:v03F0p098D*</modalias>
+    <modalias>usb:v046Dp0A1F*</modalias>
     <modalias>usb:v046Dp0A5B*</modalias>
     <modalias>usb:v046Dp0A5C*</modalias>
     <modalias>usb:v046Dp0A66*</modalias>
@@ -37,14 +49,99 @@
     <modalias>usb:v046Dp0A9C*</modalias>
     <modalias>usb:v046Dp0AA7*</modalias>
     <modalias>usb:v046Dp0AAA*</modalias>
+    <modalias>usb:v046Dp0AAD*</modalias>
     <modalias>usb:v046Dp0AB5*</modalias>
     <modalias>usb:v046Dp0ABA*</modalias>
     <modalias>usb:v046Dp0ABB*</modalias>
     <modalias>usb:v046Dp0AC4*</modalias>
+    <modalias>usb:v046Dp0ADE*</modalias>
+    <modalias>usb:v046Dp0AF7*</modalias>
     <modalias>usb:v046Dp0AFB*</modalias>
     <modalias>usb:v046Dp0AFC*</modalias>
     <modalias>usb:v046Dp0AFE*</modalias>
+    <modalias>usb:v046Dp0B18*</modalias>
+    <modalias>usb:v046Dp0B1C*</modalias>
     <modalias>usb:v046Dp0B1F*</modalias>
+    <modalias>usb:v047Fp02EE*</modalias>
+    <modalias>usb:v054Cp0EBF*</modalias>
+    <modalias>usb:v054Cp0EC2*</modalias>
+    <modalias>usb:v0951p16C4*</modalias>
+    <modalias>usb:v0951p1718*</modalias>
+    <modalias>usb:v0951p1723*</modalias>
+    <modalias>usb:v0B0Ep24C7*</modalias>
+    <modalias>usb:v0B0Ep2519*</modalias>
+    <modalias>usb:v0B0Ep2E57*</modalias>
+    <modalias>usb:v1038p1252*</modalias>
+    <modalias>usb:v1038p1260*</modalias>
+    <modalias>usb:v1038p1280*</modalias>
+    <modalias>usb:v1038p1290*</modalias>
+    <modalias>usb:v1038p12AD*</modalias>
+    <modalias>usb:v1038p12B3*</modalias>
+    <modalias>usb:v1038p12B6*</modalias>
+    <modalias>usb:v1038p12C2*</modalias>
+    <modalias>usb:v1038p12D5*</modalias>
+    <modalias>usb:v1038p12D7*</modalias>
+    <modalias>usb:v1038p12E0*</modalias>
+    <modalias>usb:v1038p12E5*</modalias>
+    <modalias>usb:v1038p12EC*</modalias>
+    <modalias>usb:v1038p2202*</modalias>
+    <modalias>usb:v1038p2206*</modalias>
+    <modalias>usb:v1038p220A*</modalias>
+    <modalias>usb:v1038p220E*</modalias>
+    <modalias>usb:v1038p2212*</modalias>
+    <modalias>usb:v1038p2216*</modalias>
+    <modalias>usb:v1038p2232*</modalias>
+    <modalias>usb:v1038p2236*</modalias>
+    <modalias>usb:v1038p223A*</modalias>
+    <modalias>usb:v1038p2253*</modalias>
+    <modalias>usb:v1038p2258*</modalias>
+    <modalias>usb:v1038p2269*</modalias>
+    <modalias>usb:v1038p226D*</modalias>
+    <modalias>usb:v1038p227A*</modalias>
+    <modalias>usb:v1038p227E*</modalias>
+    <modalias>usb:v1038p2298*</modalias>
+    <modalias>usb:v1038p229E*</modalias>
+    <modalias>usb:v1038p22A1*</modalias>
+    <modalias>usb:v1038p22A4*</modalias>
+    <modalias>usb:v1038p22A5*</modalias>
+    <modalias>usb:v1038p22A7*</modalias>
+    <modalias>usb:v1038p22A9*</modalias>
+    <modalias>usb:v1038p22AD*</modalias>
+    <modalias>usb:v1038p230A*</modalias>
+    <modalias>usb:v17EFpA07D*</modalias>
+    <modalias>usb:v1B1Cp0A14*</modalias>
+    <modalias>usb:v1B1Cp0A16*</modalias>
+    <modalias>usb:v1B1Cp0A17*</modalias>
+    <modalias>usb:v1B1Cp0A1A*</modalias>
+    <modalias>usb:v1B1Cp0A1D*</modalias>
+    <modalias>usb:v1B1Cp0A2B*</modalias>
+    <modalias>usb:v1B1Cp0A38*</modalias>
+    <modalias>usb:v1B1Cp0A3D*</modalias>
+    <modalias>usb:v1B1Cp0A3E*</modalias>
+    <modalias>usb:v1B1Cp0A4F*</modalias>
+    <modalias>usb:v1B1Cp0A51*</modalias>
+    <modalias>usb:v1B1Cp0A52*</modalias>
+    <modalias>usb:v1B1Cp0A55*</modalias>
+    <modalias>usb:v1B1Cp0A56*</modalias>
+    <modalias>usb:v1B1Cp0A62*</modalias>
+    <modalias>usb:v1B1Cp0A64*</modalias>
+    <modalias>usb:v1B1Cp0A75*</modalias>
+    <modalias>usb:v1B1Cp0A97*</modalias>
+    <modalias>usb:v1B1Cp1B1C*</modalias>
+    <modalias>usb:v1B1Cp1B23*</modalias>
+    <modalias>usb:v1B1Cp1B27*</modalias>
+    <modalias>usb:v1B1Cp1B29*</modalias>
+    <modalias>usb:v1B1Cp1B2A*</modalias>
+    <modalias>usb:v1B1Cp2A02*</modalias>
+    <modalias>usb:v1B1Cp2A08*</modalias>
+    <modalias>usb:v1E7Dp3A34*</modalias>
+    <modalias>usb:v1E7Dp3A37*</modalias>
+    <modalias>usb:v3329p4B18*</modalias>
+    <modalias>usb:v3329p4B19*</modalias>
+    <modalias>usb:v3329p4B28*</modalias>
+    <modalias>usb:v3329p4B29*</modalias>
+    <modalias>usb:v3837p6045*</modalias>
+    <modalias>usb:v9886p002C*</modalias>
   </provides>
   <categories>
     <category>AudioVideo</category>

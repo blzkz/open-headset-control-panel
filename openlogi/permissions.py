@@ -63,7 +63,17 @@ def install_rule() -> tuple[bool, str]:
     return res.returncode == 0, (res.stderr or res.stdout).strip()
 
 
+def modaliases() -> list[str]:
+    return [f"usb:v{vid:04X}p{pid:04X}*" for vid, pids in supported_ids().items() for pid in pids]
+
+
 if __name__ == "__main__":
-    out = Path(__file__).resolve().parents[1] / "packaging" / RULE_NAME
-    out.write_text(RULE)
-    print(f"wrote {out}")
+    import re
+
+    packaging = Path(__file__).resolve().parents[1] / "packaging"
+    (packaging / RULE_NAME).write_text(RULE)
+    meta = packaging / "io.github.blzkz.OpenLogiHeadset.metainfo.xml"
+    block = "".join(f"    <modalias>{m}</modalias>\n" for m in modaliases())
+    meta.write_text(re.sub(r"  <provides>\n.*?  </provides>", f"  <provides>\n{block}  </provides>",
+                           meta.read_text(), flags=re.S))
+    print(f"wrote {packaging / RULE_NAME} and the modaliases in {meta.name}")

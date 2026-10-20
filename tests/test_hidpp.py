@@ -229,6 +229,13 @@ class MultiModelTests(unittest.TestCase):
         for pid in ALL_PIDS:
             self.assertIn(f"{pid:04x}", RULE)
 
+    def test_metainfo_lists_every_supported_device(self) -> None:
+        from openlogi.permissions import modaliases
+
+        meta = (Path(__file__).parent.parent / "packaging" / "io.github.blzkz.OpenLogiHeadset.metainfo.xml").read_text()
+        listed = [line.strip()[10:-11] for line in meta.splitlines() if "<modalias>" in line]
+        self.assertEqual(listed, modaliases(), "regenerate with: python3 -m openlogi.permissions")
+
     def test_udev_rules_cover_every_driver(self) -> None:
         from openlogi.drivers import REGISTRY
         from openlogi.permissions import RULE
