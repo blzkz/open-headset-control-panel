@@ -6,6 +6,7 @@
 #include "devices/hid_interface.hpp"
 
 #include <cstdio>
+#include <array>
 #include <cstdlib>
 #include <deque>
 #include <fstream>
@@ -46,6 +47,8 @@ struct Rule {
     std::string op;
     std::vector<std::pair<size_t, uint8_t>> match;
     std::vector<std::vector<uint8_t>> replies;
+    std::vector<std::pair<size_t, size_t>> copies;  // copy=A-B: reply[A..B] = written[A..B]
+    std::vector<std::array<size_t, 3>> sums;  // sum=A-B@C: reply[C] = sum(reply[A..B]) & 0xff
 };
 struct Script {
     std::string device, variant;
@@ -86,10 +89,18 @@ static void loadScripts(const char* path)
         Rule r;
         ls >> r.op;
         std::string tok;
-        bool replies = false;
+        bool replies = false, mods = false;
         while (ls >> tok) {
             if (tok == "->") replies = true;
-            else if (replies) r.replies.push_back(unhex(tok));
+            else if (tok == "|") mods = true;
+            else if (mods && tok.rfind("copy=", 0) == 0) {
+                auto dash = tok.find('-');
+                r.copies.push_back({ std::stoul(tok.substr(5, dash - 5)), std::stoul(tok.substr(dash + 1)) });
+            } else if (mods && tok.rfind("sum=", 0) == 0) {
+                auto dash = tok.find('-'), at = tok.find('@');
+                r.sums.push_back({ std::stoul(tok.substr(4, dash - 4)), std::stoul(tok.substr(dash + 1, at - dash - 1)),
+                    std::stoul(tok.substr(at + 1)) });
+            } else if (replies) r.replies.push_back(unhex(tok));
             else {
                 auto eq = tok.find('=');
                 r.match.push_back({ std::stoul(tok.substr(0, eq)), static_cast<uint8_t>(std::stoul(tok.substr(eq + 1), nullptr, 16)) });
@@ -123,7 +134,21 @@ struct Recorder : HIDInterface {
             bool ok = true;
             for (auto [i, v] : r.match) ok = ok && i < d.size() && d[i] == v;
             if (ok) {
-                queue.assign(r.replies.begin(), r.replies.end());
+                queue.clear();
+                for (auto reply : r.replies) {
+                    for (auto [a, b] : r.copies)
+                        for (size_t i = a; i <= b && i < d.size(); i++) {
+                            if (reply.size() <= i) reply.resize(i + 1, 0);
+                            reply[i] = d[i];
+                        }
+                    for (auto [a, b, c] : r.sums) {
+                        unsigned sum = 0;
+                        for (size_t i = a; i <= b; i++) sum += i < reply.size() ? reply[i] : 0;
+                        if (reply.size() <= c) reply.resize(c + 1, 0);
+                        reply[c] = static_cast<uint8_t>(sum & 0xff);
+                    }
+                    queue.push_back(std::move(reply));
+                }
                 return;
             }
         }

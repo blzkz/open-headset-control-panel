@@ -10,9 +10,11 @@ the first one sees the uncached state.
 
 Format, one rule per line, first match wins:
     [Device name] variant
-    <op> <index>=<hex byte> ... -> <reply hex> <reply hex> ...
+    <op> <index>=<hex byte> ... -> <reply hex> <reply hex> ... [| copy=A-B sum=A-B@C]
 A write matching no rule keeps the pending replies (multi-report messages are answered
-after their last fragment).
+after their last fragment). Modifiers apply to every reply of the rule, in order:
+``copy=A-B`` copies bytes A..B of the written report (sequence numbers, transaction ids),
+``sum=A-B@C`` stores the low byte of the sum of reply bytes A..B at C (checksums).
 """
 
 from __future__ import annotations
@@ -34,10 +36,12 @@ def section(device: str, variant: str, comment: str = "") -> None:
     lines.append(f"[{device}] {variant}")
 
 
-def rule(match: list[tuple[int, int]], *replies: bytes, op: str = "write", note: str = "") -> None:
+def rule(match: list[tuple[int, int]], *replies: bytes, op: str = "write", note: str = "",
+         mods: str = "") -> None:
     spec = " ".join(f"{i}={v:02x}" for i, v in match)
     tail = " ".join(r.hex() for r in replies)
-    lines.append(f"{op} {spec} -> {tail}".rstrip() + (f"  # {note}" if note else ""))
+    line = f"{op} {spec} -> {tail}".rstrip() + (f" | {mods}" if mods else "")
+    lines.append(line + (f"  # {note}" if note else ""))
 
 
 def at(start: int, data) -> list[tuple[int, int]]:
@@ -255,6 +259,100 @@ def maxwell(name: str, eq: bool) -> None:
         req((0x0D, 0x0A), _msg(0x5B, (0x0D, 0x0A, 0x00, 0x2D, 0xE4)), arg=(0x2D, 0xE4))
 
 
+# -- Lenovo / Plantronics / Jabra / Sony ------------------------------------------------------
+
+
+def lenovo() -> None:
+    name = "Lenovo Wireless VoIP Headset"
+
+    def req(cmd: int, *payload: int, status: int = 0, note: str = "") -> None:
+        reply = bytes((0x27, cmd, status, 0x00, *payload))
+        rule([(0, 0x24), (1, cmd)], reply, op="feature_set", note=note)
+
+    section(name, "edge", "headset not connected to the dongle; a reply for another command")
+    req(0x01, status=0x01, note="offline")
+    rule([(0, 0x24), (1, 0x0E)], bytes((0x27, 0x0F, 0x00)), op="feature_set", note="wrong command")
+    req(0x08, 0x00)
+    section(name, "main", "connected")
+    req(0x01, 0x00, 0x00, 0x00, 75)
+    req(0x0E, 0x03)
+    req(0x08, 0x02, note="two hours")
+    for cmd in (0x05, 0x04, 0x02, 0x15, 0x07):
+        req(cmd, 0x01)
+
+
+def plantronics() -> None:
+    name = "Plantronics Voyager 8200 UC (BT600)"
+    head = (0x07, 0x01, 0x01, 0x10)
+
+    def frame(addr: int, op: int, grp: int, item: int, *value: int) -> bytes:
+        return bytes((*head, 0x07, addr, 0x00, 0x00, op, grp, item, *value))
+
+    section(name, "edge", "headset out of range: the dongle answers, the headset does not")
+    rule([(0, 0x07), (5, 0x00), (8, 0x01)], frame(0x00, 0x08, 0x01, 0x02), note="dongle hello")
+    rule([(0, 0x07), (5, 0x20), (8, 0x01)], note="headset hello: silence")
+    section(name, "main", "connected")
+    rule([(0, 0x07), (5, 0x00), (8, 0x01)], frame(0x00, 0x08, 0x01, 0x02))
+    rule([(0, 0x07), (5, 0x20), (8, 0x01)], bytes((0x07, 0x05)), frame(0x02, 0x08, 0x01, 0x02),
+         note="an unrelated event first")
+    rule([(0, 0x07), (8, 0x02), (9, 0x0A), (10, 0x1A)], frame(0x02, 0x03, 0x0A, 0x1A, 1, 5, 1, 0x01, 0x2C),
+         note="battery 1 of 4 steps, charging")
+    for grp, item in ((0x04, 0x10), (0x04, 0x09), (0x04, 0x11), (0x0F, 0x0E)):
+        rule([(0, 0x07), (8, 0x05), (9, grp), (10, item)], frame(0x02, 0x06, grp, item))
+
+
+def jabra(name: str, address: int) -> None:
+    def frame(typ: int, cmd: int, sub: int, *payload: int) -> bytes:
+        return bytes((0x05, 0x00, address, 0x00, (typ << 6) | (6 + len(payload)), cmd, sub, *payload))
+
+    def get(cmd: int, sub: int, *replies: bytes, note: str = "") -> None:
+        rule([(0, 0x05), (4, 0x46), (5, cmd), (6, sub)], *replies, note=note, mods="copy=3-3")
+
+    def set_(cmd: int, sub: int, *replies: bytes, note: str = "") -> None:
+        rule([(0, 0x05), (4, 0x80 | 0x06 + 1), (5, cmd), (6, sub)], *replies, note=note, mods="copy=3-3")
+        rule([(0, 0x05), (4, 0x80 | 0x06 + 2), (5, cmd), (6, sub)], *replies, note=note, mods="copy=3-3")
+
+    nack = lambda reason: frame(3, 0xFE, reason)  # noqa: E731
+    section(name, "edge", "rejections (NACK reasons) and a headset out of range")
+    get(0x12, 0x02, nack(0xF3), note="peer offline")
+    get(0x13, 0x7C, frame(3, 0x13, 0x7C, 0x00, 0x05), note="sidetone value not in the table")
+    set_(0x12, 0x08, nack(0xF6), note="not supported")
+    set_(0x13, 0x3A, nack(0x01), note="other NACK")
+    set_(0x13, 0x90, frame(3, 0x13, 0x90), note="not an ACK")
+    set_(0x13, 0x01, nack(0xFF))
+    section(name, "main", "connected")
+    get(0x12, 0x02, frame(3, 0x12, 0x02, 0x01, 87), note="charging, 87 %")
+    get(0x13, 0x7C, frame(3, 0x13, 0x7C, 0x00, 0xFD), note="sidetone -3 dB, unmuted")
+    for cmd, sub in ((0x13, 0x7C), (0x12, 0x08), (0x13, 0x3A), (0x13, 0x90), (0x13, 0x01)):
+        set_(cmd, sub, frame(3, 0xFF, sub))
+
+
+def sony_h5() -> None:
+    name = "Sony INZONE H5"
+
+    def event(eid: int, typ: int, *payload: int, tid_copy: bool = True) -> tuple[bytes, str]:
+        n = 12 + len(payload)
+        reply = bytes((0x02, n, 0x04, 0xFF, 0x00, 0x00, 0x96, 0xC3, 0x14, eid, typ, 0x00, 0x00, *payload))
+        return reply, f"copy=11-12 sum=5-{n}@{n + 1}" if tid_copy else f"sum=5-{n}@{n + 1}"
+
+    def req(eid: int, typ: int, *payload: int, junk: bool = False, note: str = "") -> None:
+        reply, mods = event(eid, typ, *payload)
+        replies = [reply]
+        if junk:  # an unrelated notification before the answer
+            replies.insert(0, event(0x01, 0x20, 0x01)[0])
+        rule([(0, 0x02), (2, 0x01), (9, eid)], *replies, note=note, mods=mods)
+
+    section(name, "edge", "headset off, out-of-range values")
+    req(0x04, 0x10, 0x00, 0xFF, note="battery 0xff: offline")
+    req(0x22, 0x10, 0x5B, note="balance above 90")
+    req(0x23, 0x10, note="answer of the wrong type for a set")
+    section(name, "main", "connected")
+    req(0x04, 0x10, 0x01, 0x50, junk=True, note="charging, 80 %")
+    req(0x22, 0x10, 0x2D, note="balance 45 of 90")
+    req(0x23, 0x20)
+    req(0x24, 0xA0)
+
+
 def main() -> None:
     lines.append("# Generated by tools/golden/make_scripts.py; do not edit. Format: see that script.")
     g522()
@@ -262,6 +360,12 @@ def main() -> None:
     a50_gen4()
     maxwell("Audeze Maxwell", eq=True)
     maxwell("Audeze Maxwell 2", eq=False)
+    lenovo()
+    plantronics()
+    for jabra_name, address in (("Jabra Link 380 (paired headset)", 0x04), ("Jabra Link 390 (paired headset)", 0x04),
+                                ("Jabra Evolve2 65 Flex (USB)", 0x08)):
+        jabra(jabra_name, address)
+    sony_h5()
     OUT.write_text("\n".join(lines) + "\n")
     print(f"wrote {OUT.relative_to(ROOT)} ({len(lines)} lines)")
 

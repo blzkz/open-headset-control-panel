@@ -179,3 +179,132 @@ write 0=06 2=80 3=05 4=5a 7=00 8=09 9=20 -> 070880055b040000092000
 write 0=06 2=80 3=05 4=5a 7=00 8=09 9=24 -> 070880055b040000092400
 write 0=06 2=80 3=05 4=5a 7=00 8=09 9=28 -> 070880055b040000092800
 write 0=06 2=80 3=05 4=5a 7=00 8=09 9=2c -> 070880055b040000092c00
+
+# headset not connected to the dongle; a reply for another command
+[Lenovo Wireless VoIP Headset] edge
+feature_set 0=24 1=01 -> 27010100  # offline
+feature_set 0=24 1=0e -> 270f00  # wrong command
+feature_set 0=24 1=08 -> 2708000000
+
+# connected
+[Lenovo Wireless VoIP Headset] main
+feature_set 0=24 1=01 -> 270100000000004b
+feature_set 0=24 1=0e -> 270e000003
+feature_set 0=24 1=08 -> 2708000002  # two hours
+feature_set 0=24 1=05 -> 2705000001
+feature_set 0=24 1=04 -> 2704000001
+feature_set 0=24 1=02 -> 2702000001
+feature_set 0=24 1=15 -> 2715000001
+feature_set 0=24 1=07 -> 2707000001
+
+# headset out of range: the dongle answers, the headset does not
+[Plantronics Voyager 8200 UC (BT600)] edge
+write 0=07 5=00 8=01 -> 0701011007000000080102  # dongle hello
+write 0=07 5=20 8=01 ->  # headset hello: silence
+
+# connected
+[Plantronics Voyager 8200 UC (BT600)] main
+write 0=07 5=00 8=01 -> 0701011007000000080102
+write 0=07 5=20 8=01 -> 0705 0701011007020000080102  # an unrelated event first
+write 0=07 8=02 9=0a 10=1a -> 0701011007020000030a1a010501012c  # battery 1 of 4 steps, charging
+write 0=07 8=05 9=04 10=10 -> 0701011007020000060410
+write 0=07 8=05 9=04 10=09 -> 0701011007020000060409
+write 0=07 8=05 9=04 10=11 -> 0701011007020000060411
+write 0=07 8=05 9=0f 10=0e -> 0701011007020000060f0e
+
+# rejections (NACK reasons) and a headset out of range
+[Jabra Link 380 (paired headset)] edge
+write 0=05 4=46 5=12 6=02 -> 05000400c6fef3 | copy=3-3  # peer offline
+write 0=05 4=46 5=13 6=7c -> 05000400c8137c0005 | copy=3-3  # sidetone value not in the table
+write 0=05 4=87 5=12 6=08 -> 05000400c6fef6 | copy=3-3  # not supported
+write 0=05 4=88 5=12 6=08 -> 05000400c6fef6 | copy=3-3  # not supported
+write 0=05 4=87 5=13 6=3a -> 05000400c6fe01 | copy=3-3  # other NACK
+write 0=05 4=88 5=13 6=3a -> 05000400c6fe01 | copy=3-3  # other NACK
+write 0=05 4=87 5=13 6=90 -> 05000400c61390 | copy=3-3  # not an ACK
+write 0=05 4=88 5=13 6=90 -> 05000400c61390 | copy=3-3  # not an ACK
+write 0=05 4=87 5=13 6=01 -> 05000400c6feff | copy=3-3
+write 0=05 4=88 5=13 6=01 -> 05000400c6feff | copy=3-3
+
+# connected
+[Jabra Link 380 (paired headset)] main
+write 0=05 4=46 5=12 6=02 -> 05000400c812020157 | copy=3-3  # charging, 87 %
+write 0=05 4=46 5=13 6=7c -> 05000400c8137c00fd | copy=3-3  # sidetone -3 dB, unmuted
+write 0=05 4=87 5=13 6=7c -> 05000400c6ff7c | copy=3-3
+write 0=05 4=88 5=13 6=7c -> 05000400c6ff7c | copy=3-3
+write 0=05 4=87 5=12 6=08 -> 05000400c6ff08 | copy=3-3
+write 0=05 4=88 5=12 6=08 -> 05000400c6ff08 | copy=3-3
+write 0=05 4=87 5=13 6=3a -> 05000400c6ff3a | copy=3-3
+write 0=05 4=88 5=13 6=3a -> 05000400c6ff3a | copy=3-3
+write 0=05 4=87 5=13 6=90 -> 05000400c6ff90 | copy=3-3
+write 0=05 4=88 5=13 6=90 -> 05000400c6ff90 | copy=3-3
+write 0=05 4=87 5=13 6=01 -> 05000400c6ff01 | copy=3-3
+write 0=05 4=88 5=13 6=01 -> 05000400c6ff01 | copy=3-3
+
+# rejections (NACK reasons) and a headset out of range
+[Jabra Link 390 (paired headset)] edge
+write 0=05 4=46 5=12 6=02 -> 05000400c6fef3 | copy=3-3  # peer offline
+write 0=05 4=46 5=13 6=7c -> 05000400c8137c0005 | copy=3-3  # sidetone value not in the table
+write 0=05 4=87 5=12 6=08 -> 05000400c6fef6 | copy=3-3  # not supported
+write 0=05 4=88 5=12 6=08 -> 05000400c6fef6 | copy=3-3  # not supported
+write 0=05 4=87 5=13 6=3a -> 05000400c6fe01 | copy=3-3  # other NACK
+write 0=05 4=88 5=13 6=3a -> 05000400c6fe01 | copy=3-3  # other NACK
+write 0=05 4=87 5=13 6=90 -> 05000400c61390 | copy=3-3  # not an ACK
+write 0=05 4=88 5=13 6=90 -> 05000400c61390 | copy=3-3  # not an ACK
+write 0=05 4=87 5=13 6=01 -> 05000400c6feff | copy=3-3
+write 0=05 4=88 5=13 6=01 -> 05000400c6feff | copy=3-3
+
+# connected
+[Jabra Link 390 (paired headset)] main
+write 0=05 4=46 5=12 6=02 -> 05000400c812020157 | copy=3-3  # charging, 87 %
+write 0=05 4=46 5=13 6=7c -> 05000400c8137c00fd | copy=3-3  # sidetone -3 dB, unmuted
+write 0=05 4=87 5=13 6=7c -> 05000400c6ff7c | copy=3-3
+write 0=05 4=88 5=13 6=7c -> 05000400c6ff7c | copy=3-3
+write 0=05 4=87 5=12 6=08 -> 05000400c6ff08 | copy=3-3
+write 0=05 4=88 5=12 6=08 -> 05000400c6ff08 | copy=3-3
+write 0=05 4=87 5=13 6=3a -> 05000400c6ff3a | copy=3-3
+write 0=05 4=88 5=13 6=3a -> 05000400c6ff3a | copy=3-3
+write 0=05 4=87 5=13 6=90 -> 05000400c6ff90 | copy=3-3
+write 0=05 4=88 5=13 6=90 -> 05000400c6ff90 | copy=3-3
+write 0=05 4=87 5=13 6=01 -> 05000400c6ff01 | copy=3-3
+write 0=05 4=88 5=13 6=01 -> 05000400c6ff01 | copy=3-3
+
+# rejections (NACK reasons) and a headset out of range
+[Jabra Evolve2 65 Flex (USB)] edge
+write 0=05 4=46 5=12 6=02 -> 05000800c6fef3 | copy=3-3  # peer offline
+write 0=05 4=46 5=13 6=7c -> 05000800c8137c0005 | copy=3-3  # sidetone value not in the table
+write 0=05 4=87 5=12 6=08 -> 05000800c6fef6 | copy=3-3  # not supported
+write 0=05 4=88 5=12 6=08 -> 05000800c6fef6 | copy=3-3  # not supported
+write 0=05 4=87 5=13 6=3a -> 05000800c6fe01 | copy=3-3  # other NACK
+write 0=05 4=88 5=13 6=3a -> 05000800c6fe01 | copy=3-3  # other NACK
+write 0=05 4=87 5=13 6=90 -> 05000800c61390 | copy=3-3  # not an ACK
+write 0=05 4=88 5=13 6=90 -> 05000800c61390 | copy=3-3  # not an ACK
+write 0=05 4=87 5=13 6=01 -> 05000800c6feff | copy=3-3
+write 0=05 4=88 5=13 6=01 -> 05000800c6feff | copy=3-3
+
+# connected
+[Jabra Evolve2 65 Flex (USB)] main
+write 0=05 4=46 5=12 6=02 -> 05000800c812020157 | copy=3-3  # charging, 87 %
+write 0=05 4=46 5=13 6=7c -> 05000800c8137c00fd | copy=3-3  # sidetone -3 dB, unmuted
+write 0=05 4=87 5=13 6=7c -> 05000800c6ff7c | copy=3-3
+write 0=05 4=88 5=13 6=7c -> 05000800c6ff7c | copy=3-3
+write 0=05 4=87 5=12 6=08 -> 05000800c6ff08 | copy=3-3
+write 0=05 4=88 5=12 6=08 -> 05000800c6ff08 | copy=3-3
+write 0=05 4=87 5=13 6=3a -> 05000800c6ff3a | copy=3-3
+write 0=05 4=88 5=13 6=3a -> 05000800c6ff3a | copy=3-3
+write 0=05 4=87 5=13 6=90 -> 05000800c6ff90 | copy=3-3
+write 0=05 4=88 5=13 6=90 -> 05000800c6ff90 | copy=3-3
+write 0=05 4=87 5=13 6=01 -> 05000800c6ff01 | copy=3-3
+write 0=05 4=88 5=13 6=01 -> 05000800c6ff01 | copy=3-3
+
+# headset off, out-of-range values
+[Sony INZONE H5] edge
+write 0=02 2=01 9=04 -> 020e04ff000096c3140410000000ff | copy=11-12 sum=5-14@15  # battery 0xff: offline
+write 0=02 2=01 9=22 -> 020d04ff000096c314221000005b | copy=11-12 sum=5-13@14  # balance above 90
+write 0=02 2=01 9=23 -> 020c04ff000096c31423100000 | copy=11-12 sum=5-12@13  # answer of the wrong type for a set
+
+# connected
+[Sony INZONE H5] main
+write 0=02 2=01 9=04 -> 020d04ff000096c3140120000001 020e04ff000096c314041000000150 | copy=11-12 sum=5-14@15  # charging, 80 %
+write 0=02 2=01 9=22 -> 020d04ff000096c314221000002d | copy=11-12 sum=5-13@14  # balance 45 of 90
+write 0=02 2=01 9=23 -> 020c04ff000096c31423200000 | copy=11-12 sum=5-12@13
+write 0=02 2=01 9=24 -> 020c04ff000096c31424a00000 | copy=11-12 sum=5-12@13

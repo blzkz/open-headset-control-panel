@@ -36,7 +36,7 @@ MAX_OPS = 48
 def load_scripts(path: Path = SCRIPTS) -> dict[str, list[tuple[str, list]]]:
     """Scripted replies shared with the C++ harness: {device: [(variant, rules)]}.
 
-    A rule is (op, [(index, byte)], [reply bytes]); see tools/golden/README.md.
+    A rule is (op, [(index, byte)], [reply bytes], [modifiers]); see tools/golden/make_scripts.py.
     """
     scripts: dict[str, list[tuple[str, list]]] = {}
     rules: list = []
@@ -50,9 +50,16 @@ def load_scripts(path: Path = SCRIPTS) -> dict[str, list[tuple[str, list]]]:
             scripts.setdefault(device, []).append((variant.strip(), rules))
             continue
         head, _, tail = line.partition("->")
+        tail, _, mods = tail.partition("|")
         op, *matches = head.split()
         match = [(int(i), int(v, 16)) for i, v in (m.split("=") for m in matches)]
-        rules.append((op, match, [bytes.fromhex(t.replace("_", "")) for t in tail.split()]))
+        modifiers = []
+        for mod in mods.split():
+            kind, _, spec = mod.partition("=")
+            lo, _, rest = spec.partition("-")
+            hi, _, at = rest.partition("@")
+            modifiers.append((kind, int(lo), int(hi), int(at) if at else -1))
+        rules.append((op, match, [bytes.fromhex(t.replace("_", "")) for t in tail.split()], modifiers))
     return scripts
 
 
@@ -71,10 +78,26 @@ class Recorder:
     def _react(self, op: str, data: bytes) -> None:
         if self.rules is None:
             return
-        for rop, match, replies in self.rules:
+        for rop, match, replies, modifiers in self.rules:
             if rop == op and all(i < len(data) and data[i] == v for i, v in match):
-                self.queue = list(replies)
+                self.queue = [self._apply(reply, data, modifiers) for reply in replies]
                 return
+
+    @staticmethod
+    def _apply(reply: bytes, written: bytes, modifiers) -> bytes:
+        out = bytearray(reply)
+        for kind, lo, hi, at in modifiers:
+            if kind == "copy":
+                for i in range(lo, min(hi, len(written) - 1) + 1):
+                    if len(out) <= i:
+                        out.extend(bytes(i + 1 - len(out)))
+                    out[i] = written[i]
+            elif kind == "sum":
+                total = sum(out[i] if i < len(out) else 0 for i in range(lo, hi + 1))
+                if len(out) <= at:
+                    out.extend(bytes(at + 1 - len(out)))
+                out[at] = total & 0xFF
+        return bytes(out)
 
     def _pop(self, n: int) -> bytes:
         return self.queue.pop(0)[:n].ljust(n, b"\0")
