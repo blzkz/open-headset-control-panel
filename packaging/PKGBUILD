@@ -1,7 +1,7 @@
 # Maintainer: blzkz <blzkz@users.noreply.github.com>
 # AUR-ready PKGBUILD building from the tagged GitHub release.
 pkgname=open-headset
-pkgver=1.2.0
+pkgver=2.0.0
 pkgrel=1
 pkgdesc="G HUB-style control panel for gaming headsets: Logitech, SteelSeries, HyperX, Corsair, Audeze… (EQ, sidetone, battery, voice, 7.1)"
 arch=('any')
