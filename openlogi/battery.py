@@ -89,7 +89,9 @@ class BatteryEstimator:
     SETTLE_S = 45.0  # ignore voltage this long after plugging / unplugging
     RAISE_GAP = 8.0  # discharging: only correct upwards by more than this…
     RAISE_VOTES = 4  # …seen in this many consecutive readings
-    STATE_MAX_AGE_S = 3 * 24 * 3600
+    # A remembered percentage is only a useful anchor if it is fresh: after hours
+    # with the app closed (e.g. charging overnight) the real level is anything.
+    STALE_S = 10 * 60
 
     def __init__(self, alpha: float = 0.3, state_file: Path | None = None):
         self.alpha = alpha
@@ -101,6 +103,7 @@ class BatteryEstimator:
         self._raw_since = 0.0
         self._transition_at = float("-inf")
         self._last_t: float | None = None
+        self._pct_t: float | None = None  # wall time the percentage was last valid
         self._raise_votes = 0
         self._load()
 
@@ -110,8 +113,8 @@ class BatteryEstimator:
             return
         try:
             data = json.loads(self.state_file.read_text())
-            if time.time() - float(data["t"]) < self.STATE_MAX_AGE_S:
-                self._pct = max(0.0, min(100.0, float(data["percent"])))
+            self._pct = max(0.0, min(100.0, float(data["percent"])))
+            self._pct_t = float(data["t"])
         except (OSError, ValueError, KeyError, TypeError):
             pass
 
@@ -147,6 +150,9 @@ class BatteryEstimator:
         now = time.time() if now is None else now
         dt = 0.0 if self._last_t is None else max(0.0, now - self._last_t)
         self._last_t = now
+        if self._pct is not None and (self._pct_t is None or now - self._pct_t > self.STALE_S):
+            self._pct = None  # stale anchor (app closed / headset off for a while): re-measure
+        self._pct_t = now
 
         # 1. debounce the power flag
         if charging != self._raw_flag:
@@ -163,7 +169,7 @@ class BatteryEstimator:
         # 2. update the estimate
         if self._charging:
             if self._pct is None:
-                self._pct = percent_from_millivolts(millivolts, charging=True)
+                self._pct = 100.0 if complete else percent_from_millivolts(millivolts, charging=True)
             else:
                 self._pct += dt / 3600.0 / CHARGE_HOURS * 100.0
             full = complete or (not settling and millivolts >= FULL_CHARGE_MV)

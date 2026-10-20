@@ -15,7 +15,7 @@ from PyQt6.QtCore import (
     pyqtProperty,
     pyqtSignal,
 )
-from PyQt6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen
+from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import (
     QAbstractButton,
     QFrame,
@@ -23,13 +23,11 @@ from PyQt6.QtWidgets import (
     QLabel,
     QSizePolicy,
     QSlider,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from .. import theme
-from ..icons import icon
 
 
 def label(text: str, obj: str | None = None, wrap: bool = False) -> QLabel:
@@ -278,45 +276,6 @@ class BatteryIcon(QWidget):
             p.setPen(QPen(QColor(theme.BG0), 1.2))
             p.setBrush(QColor("#ffffff"))
             p.drawPath(path)
-
-
-class NavButton(QToolButton):
-    """Icon button for the left rail with an accent bar when active."""
-
-    def __init__(self, icon_name: str, tooltip: str, parent: QWidget | None = None):
-        super().__init__(parent)
-        self.setCheckable(True)
-        self.setAutoExclusive(True)
-        self.setToolTip(tooltip)
-        self.setIcon(icon(icon_name, theme.TEXT3, active=theme.TEXT, size=24))
-        self.setIconSize(QSize(24, 24))
-        self.setFixedSize(72, 64)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setStyleSheet("QToolButton { border: none; background: transparent; }")
-        self._hover = False
-
-    def enterEvent(self, ev) -> None:
-        self._hover = True
-        self.update()
-        super().enterEvent(ev)
-
-    def leaveEvent(self, ev) -> None:
-        self._hover = False
-        self.update()
-        super().leaveEvent(ev)
-
-    def paintEvent(self, ev) -> None:
-        p = QPainter(self)
-        if self.isChecked() or self._hover:
-            p.fillRect(self.rect(), QColor(theme.BG2 if self.isChecked() else "#17171a"))
-        if self.isChecked():
-            p.fillRect(QRectF(0, 10, 3, self.height() - 20), QColor(theme.ACCENT))
-        ic = self.icon()
-        state = QIcon.State.On if (self.isChecked() or self._hover) else QIcon.State.Off
-        pm = ic.pixmap(self.iconSize(), QIcon.Mode.Normal, state)
-        x = (self.width() - self.iconSize().width()) // 2
-        y = (self.height() - self.iconSize().height()) // 2
-        p.drawPixmap(x, y, pm)
 
 
 class Chip(QLabel):

@@ -18,7 +18,7 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(prog="openlogi-headset", description="Logitech PRO X Wireless control panel")
     parser.add_argument("--minimized", action="store_true", help="start hidden in the system tray")
-    parser.add_argument("--page", choices=["equalizer", "mic", "surround", "info"], help="open a device page")
+    parser.add_argument("--page", choices=["equalizer", "mic", "surround", "info", "settings"], help="open a device page")
     parser.add_argument("-v", "--verbose", action="store_true", help="debug logging")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--selftest", action="store_true", help=argparse.SUPPRESS)

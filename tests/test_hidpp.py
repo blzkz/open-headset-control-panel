@@ -216,6 +216,21 @@ class BatteryTests(unittest.TestCase):
                 self.assertLessEqual(st.percent, last)
                 last = st.percent
 
+    def test_stale_saved_value_is_remeasured(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "battery.json"
+            f.write_text('{"percent": 50.0, "t": 1000.0}')  # closed at 50 % last night
+            fresh = BatteryEstimator(state_file=f).update(4120, False, now=1000.0 + 9 * 3600)
+            self.assertGreaterEqual(fresh.percent, 90)  # charged overnight: trust the cell
+            f.write_text('{"percent": 50.0, "t": 1000.0}')
+            recent = BatteryEstimator(state_file=f).update(3830, False, now=1000.0 + 60)
+            self.assertEqual(recent.percent, 50)  # restarted a minute later: keep the anchor
+
+    def test_charge_complete_flag_means_full(self) -> None:
+        st = BatteryEstimator().update(4120, True, complete=True)
+        self.assertTrue(st.full)
+        self.assertEqual(st.percent, 100)
+
     def test_state_persists(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "battery.json"

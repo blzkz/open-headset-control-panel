@@ -33,7 +33,9 @@ Estas son **todas** las funciones que expone el firmware de la primera versión 
 ### Aplicación
 - **Perfiles** (crear, duplicar, renombrar, borrar) con EQ + sidetone + voz + envolvente. Se **reaplican al conectar** el auricular (el firmware guarda el EQ en RAM).
 - **Bandeja del sistema** con icono que muestra la batería, menús rápidos de EQ/sidetone/perfil/voz/7.1, avisos de conexión y de batería baja.
-- Inicio con el sistema, inicio minimizado, instancia única, español/inglés.
+- Inicio con la sesión, inicio minimizado, instancia única, español/inglés (sección **Ajustes** del menú lateral).
+- Avisos de batería baja (umbral configurable) y de carga completada.
+- **Actualizaciones automáticas**: comprueba GitHub al iniciar y cada 6 h. Con un clic se actualiza igual que se instaló: el AppImage se sustituye a sí mismo, y los paquetes .deb/.rpm/Arch se instalan con `pkexec`. Todas las descargas se verifican con `SHA256SUMS`. Mientras el repositorio sea privado, usa la sesión de `gh` si existe (o `GH_TOKEN`).
 - Detecta cuando el auricular envía **silencio digital** (micro silenciado con el botón o brazo mal insertado) y lo avisa.
 - **CLI** para scripts (reemplazo de `headsetcontrol` para este modelo).
 

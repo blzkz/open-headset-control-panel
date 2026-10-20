@@ -1,7 +1,7 @@
 # Maintainer: blzkz <blzkz@users.noreply.github.com>
 # AUR-ready PKGBUILD building from the tagged GitHub release.
 pkgname=openlogi-headset
-pkgver=1.0.4
+pkgver=1.0.5
 pkgrel=1
 pkgdesc="G HUB-style control panel for Logitech PRO X Wireless headsets (equalizer, sidetone, battery, voice, 7.1)"
 arch=('any')

@@ -5,7 +5,6 @@ from __future__ import annotations
 from PyQt6.QtCore import QEasingCurve, QEvent, QObject, QPointF, QPropertyAnimation, Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QCursor, QMouseEvent
 from PyQt6.QtWidgets import (
-    QButtonGroup,
     QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
@@ -31,7 +30,8 @@ from .pages.info import InfoPage
 from .pages.microphone import MicrophonePage
 from .pages.settings import SettingsPage
 from .pages.surround import SurroundPage
-from .widgets.common import BatteryIcon, NavButton, Toast, label
+from .widgets.common import BatteryIcon, Toast, label
+from .widgets.navrail import NavRail
 from .widgets.popup import PopupPanel, ProfileButton
 
 
@@ -145,7 +145,9 @@ class DevicePage(QWidget):
         ("mic", "Microphone"),
         ("surround", "Surround"),
         ("info", "Device"),
+        ("settings", "Settings"),  # pinned to the bottom of the rail
     )
+    SETTINGS = 4
 
     def __init__(self, ctl: Controller):
         super().__init__()
@@ -154,19 +156,10 @@ class DevicePage(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        rail = QFrame()
-        rail.setObjectName("NavRail")
-        rail.setFixedWidth(72)
-        rv = QVBoxLayout(rail)
-        rv.setContentsMargins(0, 12, 0, 12)
-        rv.setSpacing(2)
-        self.nav = QButtonGroup(self)
+        self.nav = NavRail()
         for i, (ic, tip) in enumerate(self.PAGES):
-            btn = NavButton(ic, tr(tip))
-            self.nav.addButton(btn, i)
-            rv.addWidget(btn)
-        rv.addStretch(1)
-        root.addWidget(rail)
+            self.nav.add_item(ic, tr(tip), bottom=i == self.SETTINGS)
+        root.addWidget(self.nav)
 
         main = QVBoxLayout()
         main.setContentsMargins(0, 0, 0, 0)
@@ -203,10 +196,11 @@ class DevicePage(QWidget):
         self.stack.addWidget(MicrophonePage(ctl))
         self.stack.addWidget(SurroundPage(ctl))
         self.stack.addWidget(InfoPage(ctl))
+        self.stack.addWidget(SettingsPage(ctl))
         main.addWidget(self.stack, 1)
         root.addLayout(main, 1)
 
-        self.nav.idClicked.connect(self.show_page)
+        self.nav.currentChanged.connect(self.show_page)
         self.show_page(0)
 
         b = ctl.bridge
@@ -216,7 +210,7 @@ class DevicePage(QWidget):
         self._on_state(b.state, "")
 
     def show_page(self, index: int) -> None:
-        self.nav.button(index).setChecked(True)
+        self.nav.set_current(index)
         self.stack.setCurrentIndex(index)
         self.section.setText(tr(self.PAGES[index][1]).upper())
 
@@ -304,7 +298,7 @@ class EdgeResizer(QObject):
 
 
 class MainWindow(QMainWindow):
-    HOME, DEVICE, SETTINGS = range(3)
+    HOME, DEVICE = range(2)
     quitRequested = pyqtSignal()
 
     def __init__(self, ctl: Controller):
@@ -328,8 +322,7 @@ class MainWindow(QMainWindow):
         self.pages = FadeStack()
         self.home = HomePage(ctl)
         self.device = DevicePage(ctl)
-        self.settings = SettingsPage(ctl)
-        for w in (self.home, self.device, self.settings):
+        for w in (self.home, self.device):
             self.pages.addWidget(w)
         lay.addWidget(self.pages, 1)
 
@@ -339,8 +332,7 @@ class MainWindow(QMainWindow):
 
         self.home.openDevice.connect(lambda: self.go(self.DEVICE))
         self.title.backClicked.connect(lambda: self.go(self.HOME))
-        self.title.settingsClicked.connect(
-            lambda: self.go(self.HOME if self.pages.currentIndex() == self.SETTINGS else self.SETTINGS))
+        self.title.settingsClicked.connect(lambda: self.open_device_page(DevicePage.SETTINGS))
         ctl.profileChanged.connect(self._rebuild_profile_menu)
         self.title.profile.clicked.connect(self._show_profile_popup)
         self._rebuild_profile_menu()

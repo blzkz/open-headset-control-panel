@@ -298,6 +298,13 @@ QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
 QDialog {{ background: {BG1}; }}
 QMessageBox {{ background: {BG1}; }}
 
+QProgressBar {{
+    background: {BG4};
+    border: none;
+    border-radius: 2px;
+}}
+QProgressBar::chunk {{ background: {ACCENT}; border-radius: 2px; }}
+
 #Banner {{
     background: rgba(255, 176, 32, 0.10);
     border: 1px solid rgba(255, 176, 32, 0.35);

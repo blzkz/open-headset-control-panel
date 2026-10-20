@@ -112,6 +112,12 @@ def run(minimized: bool = False, page: str | None = None) -> int:
         app.quit()
 
     window.quitRequested.connect(quit_app)
+
+    def restart_after_update() -> None:
+        ctl.updates.relaunch_detached()
+        quit_app()
+
+    ctl.updates.installed.connect(restart_after_update)
     if not tray.available:
         config.app.close_to_tray = False  # nowhere to hide to
 
@@ -124,7 +130,8 @@ def run(minimized: bool = False, page: str | None = None) -> int:
 
     ctl.start()
     if page:
-        pages = {"equalizer": 0, "eq": 0, "mic": 1, "microphone": 1, "surround": 2, "audio": 2, "info": 3}
+        pages = {"equalizer": 0, "eq": 0, "mic": 1, "microphone": 1, "surround": 2, "audio": 2, "info": 3,
+                 "settings": 4}
         window.open_device_page(pages.get(page, 0))
     if not (minimized or config.app.start_minimized) or not tray.available:
         window.show()
@@ -144,9 +151,8 @@ def selftest() -> int:
     ctl = Controller(config)
     window = MainWindow(ctl)
     window.show()
-    for page in range(4):
+    for page in range(5):
         window.open_device_page(page)
-    window.go(window.SETTINGS)
     assert not tray_icon(None, False).isNull()
     assert not window.grab().isNull()
     QTimer.singleShot(800, app.quit)

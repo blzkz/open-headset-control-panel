@@ -10,6 +10,7 @@ from ..config import Config, Profile
 from ..presets import PRESETS_BY_KEY, match_preset
 from ..service import LinkState
 from .bridge import AudioManager, HeadsetBridge
+from .updates import UpdateManager
 from .i18n import tr
 
 
@@ -27,6 +28,7 @@ class Controller(QObject):
         self.config = config
         self.bridge = HeadsetBridge(battery_interval=config.app.battery_poll_seconds, parent=self)
         self.audio = AudioManager(self)
+        self.updates = UpdateManager(config.app.auto_check_updates, self)
         self._save_timer = QTimer(self, singleShot=True, interval=600)
         self._save_timer.timeout.connect(lambda: self.config.save())
 
@@ -190,5 +192,7 @@ class Controller(QObject):
             self.bridge.service.battery_interval = float(app.battery_poll_seconds)
         if "apply_on_connect" in changes:
             self._push_desired()
+        if "auto_check_updates" in changes:
+            self.updates.set_auto(app.auto_check_updates)
         self.settingsChanged.emit()
         self.schedule_save()

@@ -49,6 +49,7 @@ class Tray(QObject):
         self.tray.setToolTip("OpenLogi Headset")
         self.tray.activated.connect(self._activated)
         self._warned_low = False
+        self._was_full: bool | None = None
         self._last_state: LinkState | None = None
 
         self.menu = QMenu()
@@ -99,6 +100,8 @@ class Tray(QObject):
         ctl.voiceChanged.connect(lambda: self.voice_action.setChecked(ctl.profile.voice.enabled))
         ctl.surroundChanged.connect(lambda: self.surround_action.setChecked(ctl.profile.surround.enabled))
         ctl.profileChanged.connect(self._rebuild_profiles)
+        ctl.updates.available.connect(
+            lambda r: self._notify(tr("Update available"), tr("OpenLogi Headset {v} is ready to install.", v=r.version)))
         self._rebuild_profiles()
         self._on_eq(ctl.profile.eq_gains, ctl.profile.eq_preset)
         self._on_sidetone(ctl.profile.sidetone)
@@ -154,6 +157,9 @@ class Tray(QObject):
         self.status_action.setText(text)
         self.tray.setToolTip(f"PRO X Wireless — {text}")
         app = self.ctl.config.app
+        if self._was_full is False and b.full and app.notify_full_charge:
+            self._notify(tr("Fully charged"), tr("Your headset is fully charged."))
+        self._was_full = b.full
         if b.charging or b.percent > app.low_battery_percent + 3:
             self._warned_low = False
         elif app.notify_low_battery and not self._warned_low and b.percent <= app.low_battery_percent:

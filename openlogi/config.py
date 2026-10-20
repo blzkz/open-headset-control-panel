@@ -83,7 +83,9 @@ class AppSettings:
     notify_connection: bool = True
     notify_low_battery: bool = True
     low_battery_percent: int = 15
+    notify_full_charge: bool = True
     battery_poll_seconds: int = 10
+    auto_check_updates: bool = True
 
 
 CONFIG_VERSION = 2
