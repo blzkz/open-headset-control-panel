@@ -5,7 +5,7 @@ Habla directamente con el auricular a través de `/dev/hidraw` (sin hidapi, sin 
 
 > Antes se llamaba **OpenLogi Headset** ([repositorio anterior](https://github.com/blzkz/openLogiHeadsetControlPanel), archivado). Al instalar esta versión se sustituye el paquete antiguo y se conservan tus perfiles y ajustes.
 
-**🌐 Versión web (sin instalar nada): <https://blzkz.github.io/open-headset-control-panel/>**. Funciona con WebHID en Chrome, Edge, Brave u Opera, en Linux, Windows y macOS.
+**🌐 Versión web (sin instalar nada): <https://blzkz.github.io/open-headset-control-panel/>**. Funciona con WebHID en Chrome, Edge, Brave u Opera, en Linux, Windows y macOS, y con los mismos auriculares que la app de escritorio (salvo los Audeze Maxwell, que necesitan una función que WebHID no tiene).
 
 ![Inicio](docs/screenshots/home.png)
 
@@ -117,7 +117,7 @@ Batería, sidetone, ecualizador (con los pasos y el rango de cada modelo; los pr
 - **CLI** para scripts (reemplazo de `headsetcontrol` para estos modelos).
 
 ### Versión web (WebHID)
-La misma capa de protocolo portada a JavaScript, alojada en GitHub Pages: ecualizador, sidetone, iluminación, apagado automático, batería e información del dispositivo, con perfiles guardados en el navegador. Las funciones que dependen del sistema (mejora de voz, 7.1, volumen, bandeja) solo están en la app de escritorio. En Linux el navegador necesita la misma regla udev que instalan los paquetes (la web la ofrece para descargar).
+La misma capa de protocolo portada a JavaScript, alojada en GitHub Pages: HID++ para los Logitech y los 43 controladores de HeadsetControl (comprobados byte a byte igual que en Python, con `node tests/web/golden.mjs`). Ecualizador, sidetone, mezcla juego/chat, opciones de micrófono, luces, apagado automático, batería e información del dispositivo, con perfiles guardados en el navegador. Las funciones que dependen del sistema (mejora de voz, 7.1, volumen, bandeja) solo están en la app de escritorio. En Linux el navegador necesita la misma regla udev que instalan los paquetes (la web la ofrece para descargar).
 
 ## Instalación
 
@@ -202,7 +202,8 @@ openheadset/
 ├── config.py         Perfiles y ajustes (JSON atómico en ~/.config/open-headset)
 ├── cli.py            Interfaz de línea de comandos
 └── ui/               PyQt6: tema G HUB, widgets propios (gráfico EQ, mapa 7.1, vúmetro…), páginas, bandeja
-web/                  Versión WebHID (HTML/CSS/JS sin dependencias); tools/build_web.py la empaqueta para Pages
+web/                  Versión WebHID (HTML/CSS/JS sin dependencias, controladores en web/js/drivers);
+                      tools/build_web.py la empaqueta para Pages
 ```
 
 Detalles de diseño:
@@ -230,7 +231,7 @@ Interfaz 3 del receptor, página de uso `0xFF43`, solo informes HID++ largos (`0
 - El porcentaje de batería es una **estimación** a partir de la tensión (el firmware no da %); durante la carga se compensa la sobretensión.
 - El firmware del PRO X no expone el estado del botón de mute del micro.
 - Los modelos de otras marcas se sondean (batería, mezcla juego/chat) en lugar de recibir eventos.
-- La versión web (WebHID) solo cubre los modelos Logitech HID++.
+- En la versión web los Audeze Maxwell no funcionan: piden sus respuestas con *GET_REPORT* de informes de entrada, que WebHID no permite. La mejora de voz, el 7.1 virtual y la bandeja también son solo de la app de escritorio.
 - Con PipeWire < 1.4 (p. ej. Ubuntu 24.04) la puerta de ruido de la mejora de voz se omite automáticamente porque ese PipeWire no tiene el filtro `noisegate`. El resto de la cadena funciona igual.
 - Probado con la primera versión (receptor `0aba`). Los IDs `0aaa` y el PRO Wireless `0aa7` están incluidos porque usan la misma familia de protocolo, pero no se han probado.
 

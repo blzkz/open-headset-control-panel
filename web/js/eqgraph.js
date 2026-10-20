@@ -36,6 +36,7 @@ export class EqGraph extends EventTarget {
     this.ctx = canvas.getContext("2d");
     this.freqs = freqs;
     this.range = range;
+    this.step = 1;
     this.gains = freqs.map(() => 0);
     this.shown = this.gains.slice();
     this.hover = -1;
@@ -57,9 +58,10 @@ export class EqGraph extends EventTarget {
     canvas.addEventListener("keydown", (e) => this._key(e));
   }
 
-  setBands(freqs, range) {
+  setBands(freqs, range, step = 1) {
     this.freqs = freqs;
     this.range = range;
+    this.step = step || 1;
     this.gains = freqs.map(() => 0);
     this.shown = this.gains.slice();
     this.draw();
@@ -68,7 +70,7 @@ export class EqGraph extends EventTarget {
   setGains(gains, animate = true) {
     if (this.drag >= 0 || gains.length !== this.freqs.length) return;
     const from = this.shown.slice();
-    this.gains = gains.map((g) => Math.round(g));
+    this.gains = gains.map((g) => this._snap(g));
     if (!animate) {
       this.shown = this.gains.slice();
       return this.draw();
@@ -108,10 +110,21 @@ export class EqGraph extends EventTarget {
     return p.y + p.h / 2 - (db / this.range) * (p.h / 2);
   }
 
+  _snap(db) {
+    const step = this.step || 1;
+    const v = Math.max(-this.range, Math.min(this.range, Number(db)));
+    return Math.round(Math.round(v / step) * step * 1e4) / 1e4;
+  }
+
+  /** wheel / arrow-key increment: the device step, but at least half a dB */
+  get _nudge() {
+    const step = this.step || 1;
+    return step >= 0.5 ? step : Math.round(0.5 / step) * step;
+  }
+
   _dbAt(y) {
     const p = this._plot();
-    const db = ((p.y + p.h / 2 - y) / (p.h / 2)) * this.range;
-    return Math.round(Math.max(-this.range, Math.min(this.range, db)));
+    return this._snap(((p.y + p.h / 2 - y) / (p.h / 2)) * this.range);
   }
 
   _bandAt(x) {
@@ -139,7 +152,7 @@ export class EqGraph extends EventTarget {
     g.font = `11px ${css("--font")}`;
 
     // grid + dB labels
-    for (let db = -this.range; db <= this.range; db += 3) {
+    for (let db = -Math.floor(this.range / 3) * 3; db <= this.range; db += 3) {
       const y = this._y(db);
       g.strokeStyle = db === 0 ? css("--text3") : "rgba(255,255,255,.055)";
       g.setLineDash(db === 0 ? [4, 4] : []);
@@ -242,7 +255,7 @@ export class EqGraph extends EventTarget {
     const idx = this.drag >= 0 ? this.drag : this.hover;
     if (idx >= 0 && this.enabled) {
       const v = this.gains[idx];
-      const txt = v ? `${v > 0 ? "+" : ""}${v} dB` : "0 dB";
+      const txt = v ? `${v > 0 ? "+" : ""}${+v.toFixed(2)} dB` : "0 dB";
       g.font = `600 12px ${css("--font")}`;
       const bw = g.measureText(txt).width + 18;
       const x = this._x(idx);
@@ -260,7 +273,7 @@ export class EqGraph extends EventTarget {
 
   // -- interaction -----------------------------------------------------------------------
   _set(i, db, live = true) {
-    db = Math.max(-this.range, Math.min(this.range, db));
+    db = this._snap(db);
     if (this.gains[i] === db) return;
     cancelAnimationFrame(this._anim);
     this.gains[i] = db;
@@ -321,14 +334,15 @@ export class EqGraph extends EventTarget {
     if (i < 0 || !this.enabled) return;
     e.preventDefault();
     this.selected = i;
-    this._set(i, this.gains[i] + (e.deltaY < 0 ? 1 : -1));
+    this._set(i, this.gains[i] + (e.deltaY < 0 ? this._nudge : -this._nudge));
     this._commit();
   }
 
   _key(e) {
     if (!this.enabled) return;
     if (this.selected < 0) this.selected = 0;
-    const steps = { ArrowUp: 1, ArrowDown: -1, PageUp: 3, PageDown: -3 };
+    const n = this._nudge;
+    const steps = { ArrowUp: n, ArrowDown: -n, PageUp: 3 * n, PageDown: -3 * n };
     if (e.key === "ArrowLeft") this.selected = Math.max(0, this.selected - 1);
     else if (e.key === "ArrowRight") this.selected = Math.min(this.freqs.length - 1, this.selected + 1);
     else if (e.key in steps || e.key === "0") {

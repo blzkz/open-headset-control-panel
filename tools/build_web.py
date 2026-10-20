@@ -33,7 +33,9 @@ def build(out: Path) -> None:
     images = out / "assets" / "images"
     images.mkdir(parents=True, exist_ok=True)
 
-    used = {m.image for m in MODELS} | {"headset-side.png"}
+    from openheadset.drivers import REGISTRY
+
+    used = {m.image for m in MODELS} | {"headset-side.png", "headset-generic.png"} | {c.IMAGE for c in REGISTRY.drivers if c.IMAGE}
     image_map: dict[str, str] = {}
     for name in sorted(used):
         src = ROOT / "openheadset" / "assets" / "images" / name
@@ -68,6 +70,7 @@ def build(out: Path) -> None:
         ],
         "presets": [{"key": p.key, "name": p.name, "gains": list(p.gains)} for p in BUILTIN_PRESETS],
         "sideImage": image_map["headset-side.png"],
+        "images": image_map,
     }
     (out / "data").mkdir(exist_ok=True)
     (out / "data" / "models.json").write_text(json.dumps(data, indent=1))

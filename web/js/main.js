@@ -1,8 +1,11 @@
 // Open Headset Control Panel · Web: WebHID front-end for gaming headsets.
 import { BatteryEstimator, Headset, HidppError, hoursLeft, hoursToFull } from "./device.js";
 import { EqGraph } from "./eqgraph.js";
+import { EqLayout, STANDARD_FREQS, fitGains } from "./eqlayout.js";
 import { Feature, HidppTimeout, REPORT_LONG } from "./hidpp.js";
 import { applyStatic, lang, tr } from "./i18n.js";
+import { ACTIONS, DriverHeadset, VENDOR_NAMES, driverFor, isTimeout, webDrivers } from "./webhid.js";
+import { REGISTRY } from "./drivers/index.js";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -14,6 +17,8 @@ let DATA = null; // models.json
 let headset = null; // connected Headset
 let estimator = null;
 let batteryTimer = null;
+let mixTimer = null;
+let layout = new EqLayout(); // band layout of the connected headset's equalizer
 let online = false;
 let page = "eq";
 let eqGraph = null;
@@ -22,8 +27,10 @@ let eqGraph = null;
 const defaultProfile = () => ({
   eqPreset: "flat",
   eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  eqFreqs: [...STANDARD_FREQS],
   sidetone: 0,
   lighting: { mode: "static", color: "#00b4f5", brightness: 100 },
+  controls: {},
 });
 const store = loadStore();
 
@@ -45,8 +52,22 @@ const save = () => {
 };
 const profile = () => {
   if (!store.profiles[store.active]) store.active = Object.keys(store.profiles)[0];
-  return store.profiles[store.active];
+  const p = store.profiles[store.active];
+  p.controls ??= {};
+  p.eqFreqs ??= [...STANDARD_FREQS];
+  return p;
 };
+
+/** Express a profile's EQ in the connected headset's bands (presets are 10-band curves). */
+function fitProfile(p) {
+  const same = p.eqFreqs.length === layout.freqs.length && p.eqFreqs.every((f, i) => f === layout.freqs[i]);
+  const gains = fitGains(p.eqGains, layout, same ? null : p.eqFreqs);
+  if (!same || gains.some((g, i) => g !== p.eqGains[i])) {
+    p.eqGains = gains;
+    p.eqFreqs = [...layout.freqs];
+    p.eqPreset = matchPreset(gains);
+  }
+}
 
 // -- latest-wins writer: slider drags never queue up stale HID++ writes ---------------------------
 const writes = new Map();
@@ -107,7 +128,10 @@ function presetLabel(key) {
 }
 
 function matchPreset(gains) {
-  const same = (a) => a.length === gains.length && a.every((v, i) => v === gains[i]);
+  const same = (a) => {
+    const f = fitGains(a, layout);
+    return f.length === gains.length && f.every((v, i) => v === gains[i]);
+  };
   const builtin = DATA.presets.find((p) => same(p.gains));
   if (builtin) return builtin.key;
   const user = Object.entries(store.userPresets).find(([, g]) => same(g));
@@ -128,6 +152,25 @@ function renderLanding() {
     small.textContent = m.verified ? `✓ ${tr("verified")}` : tr("experimental");
     small.classList.toggle("ok", m.verified);
     list.append(el);
+  }
+  const groups = {};
+  for (const cls of REGISTRY) {
+    const vendor = VENDOR_NAMES[cls.VENDOR] || cls.VENDOR.toString(16);
+    (groups[vendor] ??= []).push(cls);
+  }
+  const brands = $("#brandList");
+  brands.innerHTML = "";
+  for (const vendor of Object.keys(groups).sort()) {
+    const box = document.createElement("div");
+    box.innerHTML = "<h4></h4><ul></ul>";
+    box.querySelector("h4").textContent = vendor;
+    for (const cls of groups[vendor].sort((a, b) => a.NAME.localeCompare(b.NAME))) {
+      const li = document.createElement("li");
+      li.textContent = cls.NAME;
+      if (!cls.WEB) li.insertAdjacentHTML("beforeend", `<small>${tr("desktop app only")}</small>`);
+      box.querySelector("ul").append(li);
+    }
+    brands.append(box);
   }
   $("#heroImg").src = DATA.models[0].image;
   $("#version").textContent = `v${DATA.version}`;
@@ -252,6 +295,7 @@ function renderProfile() {
   $("#profileName").textContent = store.active;
   renderPresets();
   eqGraph.setGains(p.eqGains);
+  renderControls();
   const st = $("#sidetone");
   st.value = p.sidetone;
   $("#sidetoneVal").textContent = `${p.sidetone}%`;
@@ -267,7 +311,7 @@ function renderPresets() {
     const b = document.createElement("button");
     b.className = "preset" + (p.eqPreset === key ? " active" : "");
     b.textContent = label;
-    b.onclick = () => setEq(key.startsWith("user:") ? store.userPresets[key.slice(5)] : DATA.presets.find((x) => x.key === key).gains, key);
+    b.onclick = () => setEq(fitGains(key.startsWith("user:") ? store.userPresets[key.slice(5)] : DATA.presets.find((x) => x.key === key).gains, layout), key);
     list.append(b);
   };
   DATA.presets.forEach((pr) => button(pr.key, tr(pr.name)));
@@ -306,7 +350,8 @@ function renderLighting() {
 // -- actions (UI → profile → headset) ------------------------------------------------------------
 function setEq(gains, key = null) {
   const p = profile();
-  p.eqGains = gains.map((g) => Math.round(g));
+  p.eqGains = fitGains(gains, layout);
+  p.eqFreqs = [...layout.freqs];
   p.eqPreset = key ?? matchPreset(p.eqGains);
   save();
   eqGraph.setGains(p.eqGains);
@@ -340,6 +385,107 @@ function applyProfileToDevice() {
   if (headset.caps.equalizer) write("eq", () => headset.setEq(p.eqGains));
   if (headset.caps.lights) write("lights", () => headset.setLights(p.lighting.mode, hexToRgb(p.lighting.color), p.lighting.brightness));
   if (headset.caps.autoOff && store.autoOff !== null) write("autoOff", () => headset.setAutoOff(store.autoOff));
+  for (const [name, value] of Object.entries(p.controls)) {
+    if (headset.controls?.includes(name) && !ACTIONS.has(name)) write(`ctl:${name}`, () => headset.setControl(name, value));
+  }
+}
+
+// -- headset controls (HeadsetControl-port models) ---------------------------------------------------
+const SWITCHES = [
+  ["voice_prompts", "Voice prompts", "Spoken announcements and tones from the headset"],
+  ["lights", "Lights", "LEDs on the headset"],
+  ["volume_limiter", "Volume limiter", "Caps the maximum output level to protect your hearing"],
+  ["rotate_to_mute", "Rotate to mute", "Mutes the microphone when the boom is raised"],
+  ["bt_when_powered_on", "Bluetooth at power-on", "Turn Bluetooth on together with the headset"],
+];
+
+function setControl(name, value) {
+  if (!ACTIONS.has(name)) {
+    profile().controls[name] = value;
+    save();
+  }
+  if (name === "eq_preset") profile().devicePreset = value;
+  renderControls();
+  if (headset?.controls?.includes(name)) write(`ctl:${name}`, () => headset.setControl(name, value));
+}
+
+function renderControls() {
+  const h = headset;
+  const c = new Set(h?.controls || []);
+  const vals = profile().controls;
+  $("#devPresetsCard").hidden = !h?.presets?.length;
+  const box = $("#devPresets");
+  if (h?.presets && box.dataset.model !== h.model.key) {
+    box.dataset.model = h.model.key;
+    box.innerHTML = "";
+    h.presets.forEach((name, i) => {
+      const b = document.createElement("button");
+      const m = /^Preset (\d+)$/.exec(name);
+      b.textContent = m ? tr("Preset {n}", { n: m[1] }) : tr(name);
+      b.onclick = () => setControl("eq_preset", i);
+      box.append(b);
+    });
+  }
+  [...box.children].forEach((b, i) => b.classList.toggle("active", profile().devicePreset === i));
+  $("#mixCard").hidden = !h?.caps.chatmix;
+  $("#micVolumeRow").hidden = !c.has("mic_volume");
+  $("#noiseRow").hidden = !c.has("noise_filter");
+  $("#ledRow").hidden = !c.has("mic_mute_led");
+  $("#micCard").hidden = !["mic_volume", "noise_filter", "mic_mute_led"].some((n) => c.has(n));
+  const mv = $("#micVolume");
+  if ("mic_volume" in vals && document.activeElement !== mv) {
+    mv.value = Math.round((vals.mic_volume * 100) / 128);
+    $("#micVolumeVal").textContent = `${mv.value}%`;
+    setFill(mv);
+  }
+  if ("noise_filter" in vals) $("#noiseFilter").value = String(vals.noise_filter);
+  if ("mic_mute_led" in vals) $("#muteLed").value = String(vals.mic_mute_led);
+  if ("bt_call_volume" in vals) $("#btCall").value = String(vals.bt_call_volume);
+  const sw = $("#switches");
+  sw.innerHTML = "";
+  for (const [name, title, desc] of SWITCHES) {
+    if (!c.has(name)) continue;
+    const row = document.createElement("div");
+    row.className = "switch-row";
+    const text = document.createElement("div");
+    const label = document.createElement("div");
+    const hint = document.createElement("div");
+    label.textContent = tr(title);
+    hint.className = "faint";
+    hint.textContent = tr(desc);
+    text.append(label, hint);
+    const btn = document.createElement("button");
+    btn.className = "switch";
+    btn.setAttribute("role", "switch");
+    btn.setAttribute("aria-label", tr(title));
+    row.append(text, btn);
+    btn.setAttribute("aria-checked", String(!!vals[name]));
+    btn.onclick = () => setControl(name, !vals[name]);
+    sw.append(row);
+  }
+  $("#btCallRow").hidden = !c.has("bt_call_volume");
+  $("#soundRow").hidden = !c.has("notification_sound");
+  $("#optsCard").hidden = ![...SWITCHES.map(([n]) => n), "bt_call_volume", "notification_sound"].some((n) => c.has(n));
+  for (const id of ["#devPresetsCard", "#micCard", "#optsCard"]) $(id).toggleAttribute("disabled", !online);
+}
+
+function renderChatmix(c) {
+  $("#mixKnob").style.left = `${(c.level / 128) * 100}%`;
+  $("#mixGame").textContent = tr("Game {p}%", { p: c.game });
+  $("#mixChat").textContent = tr("Chat {p}%", { p: c.chat });
+}
+
+async function pollChatmix() {
+  clearTimeout(mixTimer);
+  if (!headset?.caps.chatmix) return;
+  if (online) {
+    try {
+      renderChatmix(await headset.chatmix());
+    } catch (e) {
+      handleError(e);
+    }
+  }
+  mixTimer = setTimeout(pollChatmix, page === "headset" ? 1000 : 4000);
 }
 
 // -- device rendering ------------------------------------------------------------------------------
@@ -349,12 +495,25 @@ function renderDevice() {
   $("#devName").textContent = m.name;
   $("#expChip").hidden = m.verified;
   $("#expChip").title = tr("This model has not been tested on real hardware yet.");
+  const hasControls = !!(h.controls?.length || h.caps.chatmix || h.presets?.length);
   $('#rail button[data-page="light"]').hidden = !h.caps.lights;
-  if (page === "light" && !h.caps.lights) showPage("eq");
+  $('#rail button[data-page="headset"]').hidden = !hasControls;
+  if ((page === "light" && !h.caps.lights) || (page === "headset" && !hasControls)) showPage("eq");
   $("#noEq").hidden = h.caps.equalizer;
-  if (h.eq) eqGraph.setBands(h.eq.freqs, h.eq.range);
+  if (h.eq) {
+    const l = h.layout || new EqLayout(h.eq.freqs, -h.eq.range, h.eq.range, 1);
+    if (!l.equals(layout)) {
+      layout = l;
+      Object.values(store.profiles).forEach(fitProfile);
+      save();
+      renderPresets();
+    }
+    eqGraph.setBands(h.eq.freqs, h.eq.range, h.eq.step || 1);
+    $("#eqSubtitle").textContent = `${tr("Onboard {n}-band equalizer", { n: h.eq.bands })} · ${tr("stored in the headset")}`;
+  }
   eqGraph.setEnabled(h.caps.equalizer);
   eqGraph.setGains(profile().eqGains, false);
+  moveIndicator(false);
   $("#noSidetone").hidden = h.caps.sidetone;
   $("#sidetone").disabled = !h.caps.sidetone;
   $("#powerCard").hidden = !h.caps.autoOff;
@@ -363,18 +522,22 @@ function renderDevice() {
   const kv = $("#infoKv");
   kv.innerHTML = "";
   const pid = h.device.productId.toString(16).padStart(4, "0");
+  const vid = h.device.vendorId.toString(16).padStart(4, "0");
+  const hidpp = h.backend !== "headsetcontrol";
   for (const [k, v] of [
     [tr("Name"), h.identity.name],
     [tr("Model"), m.name],
+    ...(hidpp ? [] : [[tr("Vendor"), m.vendor]]),
     ...h.identity.firmware.map((f) => [tr("Firmware"), f]),
-    [tr("HID++ protocol"), h.identity.protocol],
-    [tr("USB ID"), `046d:${pid}`],
+    [tr("Protocol"), hidpp ? `HID++ ${h.identity.protocol}` : h.identity.protocol],
+    [tr("USB ID"), `${vid}:${pid}`],
     ...(h.eq ? [[tr("Equalizer"), `${h.eq.bands} × ±${h.eq.range} dB`]] : []),
   ]) {
     kv.insertAdjacentHTML("beforeend", "<dt></dt><dd></dd>");
     kv.lastElementChild.previousElementSibling.textContent = k;
     kv.lastElementChild.textContent = v;
   }
+  $("#featCard").hidden = !h.features.length;
   const fk = $("#featKv");
   fk.innerHTML = "";
   for (const f of h.featureList()) {
@@ -396,20 +559,22 @@ function setOnline(on, text = "") {
 
 function renderBattery(b) {
   const icons = [$("#battIcon"), $("#battIconBig")];
+  if (b && b.percent < 0) b = { ...b, unknown: true };
   for (const ic of icons) {
-    ic.querySelector("i").style.width = b ? `calc(${b.percent}% - 4px)` : "0";
+    ic.querySelector("i").style.width = b && !b.unknown ? `calc(${b.percent}% - 4px)` : "0";
     ic.classList.toggle("charging", !!b?.charging);
     ic.classList.toggle("low", !!b && !b.charging && b.percent <= 30 && b.percent > 15);
     ic.classList.toggle("crit", !!b && !b.charging && b.percent <= 15);
   }
-  $("#battPct").textContent = b ? `${b.percent}%` : "—";
-  $("#battBig").textContent = b ? `${b.percent}%` : "—";
+  $("#battPct").textContent = b && !b.unknown ? `${b.percent}%` : "—";
+  $("#battBig").textContent = b && !b.unknown ? `${b.percent}%` : "—";
+  const estimates = b && !b.unknown && b.estimates !== false;
   let detail = "";
   if (b?.full) detail = tr("Fully charged");
   else if (b?.charging) {
-    const h = hoursToFull(b);
+    const h = estimates ? hoursToFull(b) : null;
     detail = tr("Charging") + (h ? ` · ${tr("≈ {h} h to full", { h: h.toFixed(1) })}` : "");
-  } else if (b) detail = tr("≈ {h} h remaining", { h: hoursLeft(b).toFixed(0) });
+  } else if (estimates) detail = tr("≈ {h} h remaining", { h: hoursLeft(b).toFixed(0) });
   $("#battDetail").textContent = detail;
   if (online) $("#statusText").textContent = b?.charging ? tr("Charging") : "";
   const kv = $("#battKv");
@@ -435,7 +600,7 @@ async function pollBattery() {
   } else if (headset) {
     next = 2500;
     try {
-      await headset.hidpp.ping();
+      await headset.ping();
       await bringOnline();
       next = 10000;
     } catch {
@@ -446,7 +611,7 @@ async function pollBattery() {
 }
 
 function handleError(e) {
-  if (e instanceof HidppTimeout || e?.unreachable) {
+  if (e instanceof HidppTimeout || e?.unreachable || isTimeout(e)) {
     setOnline(false, tr("Headset off"));
     return;
   }
@@ -455,23 +620,35 @@ function handleError(e) {
 }
 
 // -- connection -------------------------------------------------------------------------------------
-const filters = () =>
-  DATA.pids.flatMap((productId) => [
+const filters = () => [
+  ...DATA.pids.flatMap((productId) => [
     { vendorId: DATA.vendorId, productId, usagePage: 0xff43 },
     { vendorId: DATA.vendorId, productId, usagePage: 0xff00 },
     { vendorId: DATA.vendorId, productId },
-  ]);
+  ]),
+  ...webDrivers().flatMap((cls) => cls.PIDS.map((productId) => ({ vendorId: cls.VENDOR, productId }))),
+];
 
 const hasHidpp = (d) => d.collections.some((c) => c.outputReports?.some((r) => r.reportId === REPORT_LONG));
-const modelFor = (d) => DATA.models.find((m) => m.pids.includes(d.productId));
+const modelFor = (d) => (d.vendorId === DATA.vendorId ? DATA.models.find((m) => m.pids.includes(d.productId)) : null);
+const usable = (d) => (modelFor(d) && hasHidpp(d)) || (!modelFor(d) && driverFor(d));
+
+/** Pick the headset among granted HID interfaces: native HID++ first, else a HeadsetControl port. */
+async function attachFrom(devices) {
+  const hid = devices.find((d) => modelFor(d) && hasHidpp(d));
+  if (hid) return attach(hid);
+  const first = devices.find((d) => !modelFor(d) && driverFor(d));
+  if (!first) return;
+  const group = devices.filter((d) => d.vendorId === first.vendorId && d.productId === first.productId);
+  return attachDriver(group, driverFor(first));
+}
 
 async function connect() {
   try {
     toast(tr("Select your headset in the browser dialog"));
     const devices = await navigator.hid.requestDevice({ filters: filters() });
     $("#toast").hidden = true;
-    const dev = devices.find((d) => modelFor(d) && hasHidpp(d));
-    if (dev) await attach(dev);
+    await attachFrom(devices);
   } catch (e) {
     toast(`${tr("Could not open the headset")}: ${e.message || e}`, true);
   }
@@ -482,17 +659,32 @@ async function attach(dev) {
   if (!dev.opened) await dev.open();
   headset = new Headset(dev, modelFor(dev));
   estimator = new BatteryEstimator(headset.model.curve, `openheadset.battery.${headset.model.key}`);
+  headset.ping = () => headset.hidpp.ping();
   headset.hidpp.onEvent = (ev) => onEvent(ev);
+  await start();
+}
+
+async function attachDriver(devices, cls) {
+  if (headset) await detach();
+  for (const d of devices) if (!d.opened) await d.open();
+  headset = new DriverHeadset(devices, cls, DATA.images[cls.IMAGE] || DATA.images["headset-generic.png"]);
+  estimator = null;
+  await start();
+}
+
+async function start() {
   showApp(true);
   showPage(page);
   $("#devName").textContent = headset.model.name;
+  renderControls();
   try {
     await bringOnline();
   } catch (e) {
-    if (e instanceof HidppTimeout || e?.unreachable) setOnline(false, tr("Turn on your headset"));
+    if (e instanceof HidppTimeout || e?.unreachable || isTimeout(e)) setOnline(false, tr("Turn on your headset"));
     else handleError(e);
   }
   pollBattery();
+  pollChatmix();
 }
 
 async function bringOnline() {
@@ -501,14 +693,21 @@ async function bringOnline() {
   renderDevice();
   applyProfileToDevice();
   if (headset.caps.autoOff) {
-    const v = await headset.getAutoOff();
-    renderAutoOff(v);
+    if (headset.getAutoOff) renderAutoOff(await headset.getAutoOff());
+    else if (store.autoOff !== null) renderAutoOff(store.autoOff);
+  }
+  if (headset.backend === "headsetcontrol" && headset.caps.battery !== "none") {
+    try {
+      renderBattery(await headset.readBattery());
+    } catch (e) {
+      handleError(e);
+    }
   }
   renderProfile();
 }
 
 async function onEvent(ev) {
-  if (!headset) return;
+  if (!headset?.hidpp) return;
   if (!online) return pollBattery();
   try {
     if (ev.sw === 0 && ev.fn === 0 && ev.feature === (await headset.hidpp.featureIndex(Feature.ADC))) {
@@ -522,6 +721,7 @@ async function onEvent(ev) {
 
 async function detach() {
   clearTimeout(batteryTimer);
+  clearTimeout(mixTimer);
   const h = headset;
   headset = null;
   online = false;
@@ -580,7 +780,18 @@ async function boot() {
     save();
     write("autoOff", () => headset.setAutoOff(store.autoOff));
   };
-  $("#resetEq").onclick = () => setEq(DATA.presets[0].gains, DATA.presets[0].key);
+  $("#resetEq").onclick = () => setEq(fitGains(DATA.presets[0].gains, layout), DATA.presets[0].key);
+  const mv = $("#micVolume");
+  mv.oninput = () => {
+    setFill(mv);
+    $("#micVolumeVal").textContent = `${mv.value}%`;
+  };
+  mv.onchange = () => setControl("mic_volume", Math.round((+mv.value * 128) / 100));
+  setFill(mv);
+  $("#noiseFilter").onchange = (e) => setControl("noise_filter", +e.target.value);
+  $("#muteLed").onchange = (e) => setControl("mic_mute_led", +e.target.value);
+  $("#btCall").onchange = (e) => setControl("bt_call_volume", +e.target.value);
+  $$("#soundRow button").forEach((b) => (b.onclick = () => setControl("notification_sound", +b.dataset.sound)));
   $("#savePreset").onclick = async () => {
     const name = await askText(tr("Save as preset…"), tr("Preset name"));
     if (!name) return;
@@ -617,12 +828,15 @@ async function boot() {
       detach();
     }
   });
-  navigator.hid.addEventListener("connect", (e) => {
-    if (!headset && modelFor(e.device) && hasHidpp(e.device)) attach(e.device);
+  navigator.hid.addEventListener("disconnect", (e) => {
+    if (headset?.devices?.includes(e.device)) detach();
+  });
+  navigator.hid.addEventListener("connect", async (e) => {
+    if (!headset && usable(e.device)) attachFrom(await navigator.hid.getDevices()).catch(handleError);
   });
   // re-open a headset the user already granted on a previous visit
-  const granted = (await navigator.hid.getDevices()).find((d) => modelFor(d) && hasHidpp(d));
-  if (granted) attach(granted).catch(handleError);
+  const granted = (await navigator.hid.getDevices()).filter(usable);
+  if (granted.length) attachFrom(granted).catch(handleError);
 }
 
 boot().catch((e) => {

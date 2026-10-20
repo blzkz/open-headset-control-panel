@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Open Headset Control Panel · Web</title>
-  <meta name="description" content="Control Logitech PRO X Wireless, G733, G935, G535 and other HID++ headsets from the browser with WebHID: equalizer, sidetone, lighting, auto power-off and battery.">
+  <meta name="description" content="Control gaming headsets from the browser with WebHID: Logitech, SteelSeries, HyperX, Corsair, Sony, Jabra and more. Equalizer, sidetone, chat mix, microphone, lighting, auto power-off and battery.">
   <meta name="theme-color" content="#0a0a0b">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
@@ -37,8 +37,8 @@
       <div class="stage">
         <img id="heroImg" alt="" src="">
       </div>
-      <h1 class="h1" data-i18n="Control your Logitech headset from the browser">Control your Logitech headset from the browser</h1>
-      <p class="muted lead" data-i18n="Equalizer, sidetone, lighting, auto power-off and battery over WebHID — nothing to install.">…</p>
+      <h1 class="h1" data-i18n="Control your headset from the browser">Control your headset from the browser</h1>
+      <p class="muted lead" data-i18n="Equalizer, sidetone, chat mix, microphone, lighting, auto power-off and battery over WebHID — nothing to install.">…</p>
       <button class="primary big" id="connectBig" data-i18n="Connect headset">Connect headset</button>
       <p class="banner" id="noHid" hidden data-i18n="Your browser does not support WebHID. Use Chrome, Edge, Brave or Opera on desktop.">…</p>
       <p class="faint" id="linuxNote" hidden>
@@ -48,9 +48,11 @@
       </p>
       <h3 class="h3" data-i18n="Supported headsets">Supported headsets</h3>
       <div class="models" id="modelList"></div>
+      <div class="brands" id="brandList"></div>
       <p class="faint small-print">
         <span data-i18n="Want voice enhancement, 7.1 surround, a tray icon and profiles applied automatically? Get the desktop app.">…</span>
-        · <span id="version"></span> · Not affiliated with Logitech. Product images © Logitech.
+        · <span id="version"></span> · <span data-i18n="Drivers for other brands are ports of HeadsetControl.">…</span>
+        Not affiliated with Logitech or any headset maker. Product images © Logitech.
       </p>
     </section>
 
@@ -61,6 +63,7 @@
         <button data-page="eq" data-i18n-title="Equalizer"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg></button>
         <button data-page="mic" data-i18n-title="Microphone"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8"/></svg></button>
         <button data-page="light" data-i18n-title="Lighting" hidden><svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg></button>
+        <button data-page="headset" data-i18n-title="Headset" hidden><svg viewBox="0 0 24 24"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 15a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 15a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg></button>
         <button data-page="device" data-i18n-title="Device"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5M12 8h.01"/></svg></button>
       </nav>
       <div class="content">
@@ -92,7 +95,7 @@
               <div class="eq-head">
                 <div>
                   <h2 class="h2" data-i18n="Equalizer">Equalizer</h2>
-                  <p class="faint" data-i18n="Onboard 10-band equalizer · stored in the headset">…</p>
+                  <p class="faint" id="eqSubtitle" data-i18n="Onboard 10-band equalizer · stored in the headset">…</p>
                 </div>
                 <div class="eq-head-right">
                   <span class="preset-name" id="presetName"></span>
@@ -135,6 +138,42 @@
             <div class="card stage-card"><div class="stage small" id="lightStage"><img id="lightImg" alt=""></div></div>
           </div>
 
+          <!-- headset controls (HeadsetControl-port models) -->
+          <div class="page controls-page" data-page="headset">
+            <div class="card" id="devPresetsCard" hidden>
+              <h2 class="h2" data-i18n="Onboard presets">Onboard presets</h2>
+              <p class="faint" data-i18n="Equalizer presets stored in the headset itself">…</p>
+              <div class="segments wrap" id="devPresets"></div>
+            </div>
+            <div class="card" id="mixCard" hidden>
+              <h2 class="h2" data-i18n="Game / chat mix">Game / chat mix</h2>
+              <p class="faint" data-i18n="Set with the dial on the headset">…</p>
+              <div class="mixbar"><i id="mixKnob"></i></div>
+              <div class="row"><b class="accent" id="mixGame"></b><b class="accent" id="mixChat"></b></div>
+            </div>
+            <div class="controls-grid">
+              <div class="card" id="micCard" hidden>
+                <h2 class="h2" data-i18n="Microphone">Microphone</h2>
+                <div id="micVolumeRow">
+                  <label class="slider-row"><span data-i18n="Microphone volume">Microphone volume</span><b id="micVolumeVal">100%</b></label>
+                  <input type="range" id="micVolume" min="0" max="100" value="100">
+                </div>
+                <div class="row" id="noiseRow"><div><div data-i18n="Noise filter">Noise filter</div><div class="faint" data-i18n="Filters background noise in the headset">…</div></div>
+                  <select id="noiseFilter"><option value="0" data-i18n="Off">Off</option><option value="1" data-i18n="Low">Low</option><option value="2" data-i18n="High">High</option></select></div>
+                <div class="row" id="ledRow"><div><div data-i18n="Mute LED">Mute LED</div><div class="faint" data-i18n="Brightness of the LED that shows the microphone is muted">…</div></div>
+                  <select id="muteLed"><option value="0" data-i18n="Off">Off</option><option value="1" data-i18n="Low">Low</option><option value="2" data-i18n="Medium">Medium</option><option value="3" data-i18n="High">High</option></select></div>
+              </div>
+              <div class="card" id="optsCard" hidden>
+                <h2 class="h2" data-i18n="Headset">Headset</h2>
+                <div id="switches"></div>
+                <div class="row" id="btCallRow"><div><div data-i18n="Bluetooth calls">Bluetooth calls</div><div class="faint" data-i18n="What happens to game audio during a phone call">…</div></div>
+                  <select id="btCall"><option value="0" data-i18n="Keep game audio">Keep game audio</option><option value="1" data-i18n="Lower game audio by 12 dB">Lower game audio by 12 dB</option><option value="2" data-i18n="Mute game audio">Mute game audio</option></select></div>
+                <div class="row" id="soundRow"><div><div data-i18n="Notification sound">Notification sound</div><div class="faint" data-i18n="Play a sound on the headset">…</div></div>
+                  <div class="segments"><button data-sound="0">1</button><button data-sound="1">2</button></div></div>
+              </div>
+            </div>
+          </div>
+
           <!-- device -->
           <div class="page grid2 device-page" data-page="device">
             <div class="stack">
@@ -156,7 +195,7 @@
                 <p class="muted" id="battDetail"></p>
                 <dl class="kv" id="battKv"></dl>
               </div>
-              <div class="card">
+              <div class="card" id="featCard">
                 <h2 class="h2" data-i18n="HID++ features">HID++ features</h2>
                 <dl class="kv mono" id="featKv"></dl>
               </div>
