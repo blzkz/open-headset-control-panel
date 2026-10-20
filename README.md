@@ -14,6 +14,8 @@ Habla directamente con el auricular a través de `/dev/hidraw` (sin hidapi, sin 
 | ![EQ](docs/screenshots/eq.png) | ![Mic](docs/screenshots/mic.png) |
 | **Sonido envolvente** | **Dispositivo** |
 | ![7.1](docs/screenshots/surround.png) | ![Info](docs/screenshots/info.png) |
+| **Auriculares (otras marcas)** | **Ajustes** |
+| ![Auriculares](docs/screenshots/headset.png) | ![Ajustes](docs/screenshots/settings.png) |
 
 ## Auriculares compatibles
 
