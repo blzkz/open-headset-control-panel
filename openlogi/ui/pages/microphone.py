@@ -167,7 +167,10 @@ class MicrophonePage(QWidget):
         if has:
             self.mic_volume.setValueSilently(st.source.volume)
             self.mic_mute.setCheckedSilently(st.source.muted)
-        if self.isVisible():
+        # Re-open the meter only when the headset mic itself changed: restarting it on
+        # every audio event re-triggers those events (and KDE's "mic in use" indicator).
+        node = st.source.name if has else ""
+        if self.isVisible() and node != self.monitor.node:
             self._restart_meter()
 
     def _sync_voice(self) -> None:

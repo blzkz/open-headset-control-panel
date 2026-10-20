@@ -151,6 +151,7 @@ class AudioManager(QObject):
         self._voice_cfg: VoiceSettings | None = None
         self._surround_cfg: SurroundSettings | None = None
         self._prev_default: dict[str, str] = {}
+        self._last_emitted: pulse.AudioState | None = None
         self.stateChanged.connect(self._on_state)
         if self.available:
             self._subscribe()
@@ -167,16 +168,25 @@ class AudioManager(QObject):
 
     def _on_events(self) -> None:
         data = bytes(self._sub.readAllStandardOutput()).decode(errors="replace")
-        if any(k in data for k in ("sink", "source", "server", "card")):
+        if pulse.is_relevant_event(data):
             self._debounce.start()
 
     def set_usb_id(self, vendor: int, product: int) -> None:
         self.vendor_id, self.product_id = vendor, product
-        self.refresh()
+        self.refresh(force=True)
 
-    def refresh(self) -> None:
+    def refresh(self, force: bool = False) -> None:
         vid, pid = self.vendor_id, self.product_id
-        self._worker.submit("refresh", lambda: self.stateChanged.emit(pulse.query(vid, pid)))
+
+        def job() -> None:
+            state = pulse.query(vid, pid)
+            # stream start/stop also flips a source between RUNNING/IDLE ("change on
+            # source"): nothing the UI shows, so don't wake every page for it
+            if force or state != self._last_emitted:
+                self._last_emitted = state
+                self.stateChanged.emit(state)
+
+        self._worker.submit("refresh", job)
 
     def _on_state(self, state: pulse.AudioState) -> None:
         old_sink = self.state.sink.name if self.state.sink else None
@@ -307,6 +317,11 @@ class MicLevelMonitor(QObject):
         self._node = ""
         self._zero_run = 0
         self._silent = False
+
+    @property
+    def node(self) -> str:
+        """Capture device currently metered ("" when stopped)."""
+        return self._node
 
     def start(self, node_name: str) -> bool:
         if self._source is not None and node_name == self._node:

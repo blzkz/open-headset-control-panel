@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import math
 import random
+import re
 import shutil
 import struct
 import subprocess
@@ -33,6 +34,16 @@ class AudioState:
     default_sink: str = ""
     default_source: str = ""
     descriptions: dict[str, str] = field(default_factory=dict)
+
+
+# Only device-level objects matter. Streams and clients (our own level meter, every
+# pactl invocation) churn constantly and would cause refresh feedback loops.
+_RELEVANT_EVENT = re.compile(r"on (?:sink|source|card|server)(?![-\w])")
+
+
+def is_relevant_event(text: str) -> bool:
+    """Whether ``pactl subscribe`` output mentions a sink/source/card/server change."""
+    return _RELEVANT_EVENT.search(text) is not None
 
 
 def pactl_available() -> bool:

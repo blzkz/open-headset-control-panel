@@ -20,6 +20,7 @@ from openlogi.hidpp.protocol import (
 )
 from openlogi.presets import CUSTOM_KEY, PRESETS_BY_KEY, match_preset
 from openlogi.audio.filterchain import spa_value
+from openlogi.audio.pulse import is_relevant_event
 
 FEATURES = [0x0000, 0x0001, 0x0003, 0x0005, 0x8310, 0x8300, 0x1F20]
 FREQS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
@@ -256,6 +257,13 @@ class MiscTests(unittest.TestCase):
         for p in PRESETS_BY_KEY.values():
             self.assertEqual(len(p.gains), 10)
             self.assertTrue(all(-12 <= g <= 12 for g in p.gains))
+
+    def test_pactl_event_filter(self) -> None:
+        relevant = ["Event 'change' on source #58", "Event 'change' on sink #57", "Event 'change' on card #46",
+                    "Event 'change' on server #-1"]
+        noise = ["Event 'new' on source-output #5", "Event 'remove' on sink-input #3", "Event 'new' on client #9"]
+        self.assertTrue(all(is_relevant_event(e) for e in relevant))
+        self.assertFalse(any(is_relevant_event(e) for e in noise))
 
     def test_spa_json(self) -> None:
         self.assertEqual(spa_value({"a.b": [1, "x", True]}), '{ "a.b" = [ 1 "x" true ] }')
